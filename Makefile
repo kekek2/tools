@@ -42,6 +42,7 @@ TOOLSDIR?=	/usr/tools
 PORTSDIR?=	/usr/ports
 COREDIR?=	/usr/core
 SRCDIR?=	/usr/src
+FORCE?=		none
 
 # A couple of meta-targets for easy use and ordering:
 
@@ -76,5 +77,5 @@ ${STEP}: lint
 	    -S ${SRCDIR} -P ${PORTSDIR} -p ${PLUGINSDIR} -T ${TOOLSDIR} \
 	    -C ${COREDIR} -R ${PORTSREFDIR} -t ${TYPE} -k ${PRIVKEY} \
 	    -K ${PUBKEY} -l "${SIGNCHK}" -L "${SIGNCMD}" \
-	    -m ${MIRRORS:Ox:[1]} -o "${STAGEDIRPREFIX}" ${${STEP}_ARGS}
+	    -m ${MIRRORS:Ox:[1]} -o "${STAGEDIRPREFIX}" -F ${FORCE} ${${STEP}_ARGS}
 .endfor

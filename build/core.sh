@@ -31,7 +31,9 @@ set -e
 
 CORE_MARKER="core"
 
-check_packages ${CORE_MARKER} ${@}
+if [ "$FORCE" != "$CORE_MARKER" ]; then
+    check_packages ${CORE_MARKER} ${@}
+fi
 
 setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}

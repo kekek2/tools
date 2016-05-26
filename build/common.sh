@@ -39,7 +39,7 @@ usage()
 	exit 1
 }
 
-while getopts C:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
+while getopts C:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v:F: OPT; do
 	case ${OPT} in
 	C)
 		export COREDIR=${OPTARG}
@@ -113,6 +113,10 @@ while getopts C:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
 		;;
 	v)
 		export PRODUCT_VERSION=${OPTARG}
+		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
+		;;
+	F)
+		export FORCE=${OPTARG}
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
 	*)
