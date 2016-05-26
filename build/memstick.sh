@@ -41,7 +41,8 @@ sh ./clean.sh memstick
 setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}
 setup_kernel ${STAGEDIR}
-setup_packages ${STAGEDIR}
+setup_packages ${STAGEDIR} ting os-ndpi
+make_brand_boot ${STAGEDIR}
 setup_mtree ${STAGEDIR}
 
 echo ">>> Building memstick image(s)..."

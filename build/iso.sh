@@ -39,9 +39,11 @@ sh ./clean.sh iso
 setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}
 setup_kernel ${STAGEDIR}
-setup_packages ${STAGEDIR}
+setup_packages ${STAGEDIR} ting os-ndpi
+make_brand_boot ${STAGEDIR}
 setup_mtree ${STAGEDIR}
 setup_entropy ${STAGEDIR}
+
 
 echo -n ">>> Building ISO image... "
 

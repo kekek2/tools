@@ -21,8 +21,8 @@ lint:
 
 # Bootstrap the build options if not set:
 
-NAME?=		OPNsense
-TYPE?=		opnsense
+NAME?=		TING
+TYPE?=		ting
 FLAVOUR?=	OpenSSL
 SETTINGS?=	16.1
 MIRRORS?=	https://opnsense.c0urier.net \

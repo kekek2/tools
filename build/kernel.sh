@@ -33,6 +33,9 @@ KERNEL_SET=$(find ${SETSDIR} -name "kernel-*-${ARCH}.txz")
 
 if [ -f "${KERNEL_SET}" -a -z "${1}" ]; then
 	echo ">>> Reusing kernel set: ${KERNEL_SET}"
+	git_describe ${SRCDIR}
+	KERNEL_SET=${SETSDIR}/kernel-${REPO_VERSION}-${ARCH}
+	generate_signature ${KERNEL_SET}.txz
 	exit 0
 fi
 

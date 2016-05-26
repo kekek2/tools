@@ -361,6 +361,7 @@ check_packages()
 	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${ARCH}.tar")
 	MARKER=${1}
 	SKIP=${2}
+	echo "MARKER: ${MARKER}, SKIP: ${SKIP}"
 
 	if [ -z "${MARKER}" -o -z "${PACKAGESET}" -o -n "${SKIP}" ]; then
 		return
@@ -414,6 +415,8 @@ install_packages()
 	BASEDIR=${1}
 	shift
 	PKGLIST=${@}
+	
+	echo ">>> PKGLIST: ${PKGLIST}"
 
 	# remove previous packages for a clean environment
 	pkg -c ${BASEDIR} remove -fya
@@ -479,6 +482,10 @@ make -C ${2} DESTDIR=${1} ${3} scripts
 make -C ${2} DESTDIR=${1} ${3} manifest > ${1}/+MANIFEST
 make -C ${2} DESTDIR=${1} ${3} plist > ${1}/plist
 
+echo "$(pwd) content:"
+ls -la ${1}/
+cat ${1}/plist
+cat ${1}/+MANIFEST
 echo -n ">>> Creating custom package for ${2}... "
 pkg create -m ${1} -r ${1} -p ${1}/plist -o ${PACKAGESDIR}/All
 echo "done"
@@ -583,4 +590,18 @@ setup_stage()
 
 	# revive directory for next run
 	mkdir -p ${1}
+}
+
+make_brand_boot()
+{
+    echo ">>> Branded LOGOs and bootloader"
+    rm ${STAGEDIR}/boot/logo-hour*
+    cp -f /usr/tools/branded/brand.4th ${1}/boot/
+    cp -f /usr/tools/branded/brand-ting.4th ${1}/boot/
+    cp -f /usr/tools/branded/menu.4th ${1}/boot/
+    cp -f /usr/tools/branded/logo-ting.4th ${1}/boot/
+    cp -f /usr/tools/branded/logo-tingbw.4th ${1}/boot/
+    cp -f /usr/tools/branded/beastie.4th ${1}/boot/
+    cp -f /usr/tools/branded/boot0 ${1}/boot/
+    cp -f /usr/tools/branded/loader.conf ${1}/boot/defaults/
 }

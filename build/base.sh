@@ -33,6 +33,10 @@ BASE_SET=$(find ${SETSDIR} -name "base-*-${ARCH}.txz")
 
 if [ -f "${BASE_SET}" -a -z "${1}" ]; then
 	echo ">>> Reusing base set: ${BASE_SET}"
+	git_describe ${SRCDIR}
+	BASE_SET=${SETSDIR}/base-${REPO_VERSION}-${ARCH}
+	generate_signature ${BASE_SET}.txz
+	generate_signature ${BASE_SET}.obsolete
 	exit 0
 fi
 

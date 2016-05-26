@@ -43,6 +43,7 @@ setup_distfiles ${STAGEDIR}
 
 extract_packages ${STAGEDIR}
 remove_packages ${STAGEDIR} ${@}
+remove_packages ${STAGEDIR} opnsense-lang
 install_packages ${STAGEDIR}
 
 echo ">>> Building packages..."
