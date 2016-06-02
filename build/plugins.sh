@@ -31,7 +31,9 @@ set -e
 
 PLUGINS_MARKER="plugins"
 
-check_packages ${PLUGINS_MARKER} ${@}
+if [ "$FORCE" != "$PLUGINS_MARKER" ]; then
+    check_packages ${PLUGINS_MARKER} ${@}
+fi
 
 if [ -z "${*}" ]; then
 	PLUGINS_LIST=$(make -C ${PLUGINSDIR} list)
