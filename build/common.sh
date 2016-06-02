@@ -600,6 +600,7 @@ make_brand_boot()
 {
     echo ">>> Branded LOGOs and bootloader"
     rm ${STAGEDIR}/boot/logo-hour*
+    rm ${STAGEDIR}/boot/brand-opnsense.4th
     cp -f /usr/tools/branded/brand.4th ${1}/boot/
     cp -f /usr/tools/branded/brand-ting.4th ${1}/boot/
     cp -f /usr/tools/branded/menu.4th ${1}/boot/
@@ -607,5 +608,6 @@ make_brand_boot()
     cp -f /usr/tools/branded/logo-tingbw.4th ${1}/boot/
     cp -f /usr/tools/branded/beastie.4th ${1}/boot/
     cp -f /usr/tools/branded/boot0 ${1}/boot/
-    cp -f /usr/tools/branded/loader.conf ${1}/boot/defaults/
+#    cp -f /usr/tools/branded/loader.conf.defaults ${1}/boot/defaults/
+    cp -f /usr/tools/branded/loader.conf ${1}/boot/
 }

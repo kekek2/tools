@@ -64,6 +64,7 @@ boot_multicons="YES"
 boot_serial="YES"
 console="comconsole,vidconsole"
 comconsole_speed="${SERIAL_SPEED}"
+autoboot_delay="2"
 EOF
 
 sed -i '' -e "s:</system>:${SERIAL_CONFIG}</system>:" ${STAGEDIR}${CONFIG_XML}
