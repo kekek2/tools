@@ -1,6 +1,6 @@
-STEPS=		base chroot clean core distfiles kernel iso \
-		memstick nano plugins ports prefetch rebase \
-		regress release skim
+STEPS=		base boot cdrom chroot clean core distfiles \
+		kernel nano plugins ports prefetch rebase \
+		release serial skim test vga vm
 .PHONY:		${STEPS}
 
 PAGER?=		less
@@ -25,6 +25,8 @@ NAME?=		TING
 TYPE?=		ting
 FLAVOUR?=	OpenSSL
 SETTINGS?=	16.1
+DEVICE?=	a10
+SPEED?=		115200
 MIRRORS?=	https://opnsense.c0urier.net \
 		http://mirrors.nycbug.org/pub/opnsense \
 		http://mirror.wdc1.us.leaseweb.net/opnsense \
@@ -50,8 +52,10 @@ ports distfiles: base
 plugins: ports
 core: plugins
 packages: core
-iso memstick nano: packages kernel
-everything release: iso memstick nano
+cdrom vm serial vga nano: packages kernel
+sets: distfiles packages kernel
+images: cdrom nano serial vga vm
+release: images
 
 # Expand target arguments for the script append:
 
@@ -63,7 +67,7 @@ ${TARGET}: ${_TARGET}
 .endif
 .endfor
 
-.if defined(VERBOSE)
+.if "${VERBOSE}" != ""
 VERBOSE_FLAGS=	-x
 .endif
 
@@ -76,6 +80,7 @@ ${STEP}: lint
 	    -f ${FLAVOUR} -n ${NAME} -v ${VERSION} -s ${SETTINGS} \
 	    -S ${SRCDIR} -P ${PORTSDIR} -p ${PLUGINSDIR} -T ${TOOLSDIR} \
 	    -C ${COREDIR} -R ${PORTSREFDIR} -t ${TYPE} -k ${PRIVKEY} \
-	    -K ${PUBKEY} -l "${SIGNCHK}" -L "${SIGNCMD}" \
-	    -m ${MIRRORS:Ox:[1]} -o "${STAGEDIRPREFIX}" -F ${FORCE} ${${STEP}_ARGS}
+	    -K ${PUBKEY} -l "${SIGNCHK}" -L "${SIGNCMD}" -d ${DEVICE} \
+	    -m ${MIRRORS:Ox:[1]} -o "${STAGEDIRPREFIX}" -c ${SPEED} -F ${FORCE} \
+	    ${${STEP}_ARGS}
 .endfor

@@ -27,38 +27,35 @@
 
 set -e
 
+SELF=clean
+
 . ./common.sh && $(${SCRUB_ARGS})
 
 for ARG in ${@}; do
 	case ${ARG} in
 	base)
 		echo ">>> Removing base set"
-		rm -f ${SETSDIR}/base-*-${ARCH}.txz
-		rm -f ${SETSDIR}/base-*-${ARCH}.txz.sig
-		rm -f ${SETSDIR}/base-*-${ARCH}.obsolete
-		rm -f ${SETSDIR}/base-*-${ARCH}.obsolete.sig
+		rm -f ${SETSDIR}/base-*-${ARCH}.*
+		;;
+	cdrom)
+		echo ">>> Removing cdrom image"
+		rm -f ${IMAGESDIR}/*-cdrom-${ARCH}.*
 		;;
 	distfiles)
 		echo ">>> Removing distfiles set"
 		rm -f ${SETSDIR}/distfiles-*.tar
 		;;
-	iso)
-		echo ">>> Removing iso image"
-		rm -f ${IMAGESDIR}/*-cdrom-${ARCH}.iso
+	images)
+		setup_stage ${IMAGESDIR}
+		rm -r ${IMAGESDIR}
 		;;
 	kernel)
 		echo ">>> Removing kernel set"
-		rm -f ${SETSDIR}/kernel-*-${ARCH}.txz
-		rm -f ${SETSDIR}/kernel-*-${ARCH}.txz.sig
-		;;
-	memstick)
-		echo ">>> Removing memstick images"
-		rm -f ${IMAGESDIR}/*-serial-${ARCH}.img
-		rm -f ${IMAGESDIR}/*-vga-${ARCH}.img
+		rm -f ${SETSDIR}/kernel-*-${ARCH}.*
 		;;
 	nano)
 		echo ">>> Removing nano image"
-		rm -f ${IMAGESDIR}/*-nano-${ARCH}.img
+		rm -f ${IMAGESDIR}/*-nano-${ARCH}.*
 		;;
 	packages)
 		echo ">>> Removing packages set"
@@ -68,11 +65,29 @@ for ARG in ${@}; do
 		echo ">>> Removing release set"
 		rm -f ${SETSDIR}/release-*-${PRODUCT_FLAVOUR}-${ARCH}.tar
 		;;
+	serial)
+		echo ">>> Removing serial image"
+		rm -f ${IMAGESDIR}/*-serial-${ARCH}.*
+		;;
+	sets)
+		setup_stage ${SETSDIR}
+		rm -r ${SETSDIR}
+		;;
 	stage)
 		setup_stage ${STAGEDIR}
+		rm -r ${STAGEDIR}
 		;;
 	src)
 		setup_stage /usr/obj${SRCDIR}
+		rm -r /usr/obj${SRCDIR}
+		;;
+	vga)
+		echo ">>> Removing vga image"
+		rm -f ${IMAGESDIR}/*-vga-${ARCH}.*
+		;;
+	vm)
+		echo ">>> Removing vm image"
+		rm -f ${IMAGESDIR}/*-vm-${ARCH}.*
 		;;
 	esac
 done

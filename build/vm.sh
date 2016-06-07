@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2015-2016 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2016 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,59 +27,75 @@
 
 set -e
 
-SELF=distfiles
+SELF=vm
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-PORTS_LIST="ports-mgmt/pkg
-security/openssl
-security/libressl
-$(cat ${CONFIGDIR}/ports.conf)"
+check_images ${SELF} ${@}
 
-setup_stage ${STAGEDIR}
-setup_base ${STAGEDIR}
-setup_clone ${STAGEDIR} ${PORTSDIR}
-setup_clone ${STAGEDIR} ${SRCDIR}
-setup_chroot ${STAGEDIR}
-setup_distfiles ${STAGEDIR}
+VMFORMAT="vmdk"
+VMSIZE="20G"
+VMSWAP="1G"
 
-git_describe ${PORTSDIR}
-
-echo ">>> Fetching distfiles..."
-
-MAKE_CONF="${CONFIGDIR}/make.conf"
-if [ -f ${MAKE_CONF} ]; then
-	cp ${MAKE_CONF} ${STAGEDIR}/etc/make.conf
+if [ -n "${1}" ]; then
+	VMFORMAT=${1}
 fi
 
-echo "CLEAN_FETCH_ENV=yes" >> ${STAGEDIR}/etc/make.conf
+if [ -n "${2}" ]; then
+	VMSIZE=${2}
+fi
 
-# block SIGINT to allow for collecting port progress (use with care)
-trap : 2
-
-if ! chroot ${STAGEDIR} /bin/sh -es << EOF; then PORTS_LIST=; fi
-echo "${PORTS_LIST}" | while read PORT_ORIGIN PORT_BROKEN; do
-	if [ "\$(echo \${PORT_ORIGIN} | colrm 2)" = "#" ]; then
-		continue
+if [ -n "${3}" ]; then
+	if [ "${3}" != "off" ]; then
+		VMSWAP=${3}
+	else
+		VMSWAP=
 	fi
+fi
 
-	echo ">>> Fetching \${PORT_ORIGIN}..."
-
-	make -C ${PORTSDIR}/\${PORT_ORIGIN} fetch-recursive
-done
-EOF
-
-# unblock SIGINT
-trap - 2
+VMIMG="${IMAGESDIR}/${PRODUCT_RELEASE}-vm-${ARCH}.${VMFORMAT}"
+VMBASE="${STAGEDIR}/vmbase"
 
 sh ./clean.sh ${SELF}
 
-echo -n ">>> Creating distfiles set... "
-tar -C ${STAGEDIR}${PORTSDIR} -cf \
-    ${SETSDIR}/distfiles-${REPO_VERSION}.tar distfiles
-echo "done"
+setup_stage ${STAGEDIR} mnt
 
-if [ -z "${PORTS_LIST}" ]; then
-	echo ">>> The distfiles fetch did not finish properly :("
-	exit 1
+truncate -s ${VMSIZE} ${VMBASE}
+MD=$(mdconfig -f ${VMBASE})
+newfs /dev/${MD}
+mount /dev/${MD} ${STAGEDIR}/mnt
+
+setup_base ${STAGEDIR}/mnt
+
+# need these again later
+cp -r ${STAGEDIR}/mnt/boot ${STAGEDIR}
+
+setup_kernel ${STAGEDIR}/mnt
+setup_packages ${STAGEDIR}/mnt
+setup_extras ${STAGEDIR}/mnt ${SELF}
+setup_entropy ${STAGEDIR}/mnt
+
+cat > ${STAGEDIR}/mnt/etc/fstab << EOF
+# Device	Mountpoint	FStype	Options	Dump	Pass#
+/dev/gpt/rootfs	/		ufs	rw	1	1
+EOF
+
+SWAPARGS=
+
+if [ -n "${VMSWAP}" ]; then
+	SWAPARGS="-p freebsd-swap/swapfs::${VMSWAP}"
+	cat >> ${STAGEDIR}/mnt/etc/fstab << EOF
+/dev/gpt/swapfs	none		swap	sw	0	0
+EOF
 fi
+
+umount ${STAGEDIR}/mnt
+mdconfig -d -u ${MD}
+
+echo -n ">>> Building vm image... "
+
+mkimg -s gpt -f ${VMFORMAT} -o ${VMIMG} -b ${STAGEDIR}/boot/pmbr \
+    -p freebsd-boot/bootfs:=${STAGEDIR}/boot/gptboot \
+    -p freebsd-ufs/rootfs:=${VMBASE} ${SWAPARGS}
+
+echo "done"

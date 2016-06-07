@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2014 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2016 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,22 +27,25 @@
 
 set -e
 
+SELF=boot
+
 . ./common.sh && $(${SCRUB_ARGS})
 
-setup_stage ${STAGEDIR}
-setup_base ${STAGEDIR}
-setup_clone ${STAGEDIR} ${COREDIR}
-setup_chroot ${STAGEDIR}
+if [ -z "${1}" ]; then
+	echo ">> No image given."
+	exit 0
+fi
 
-extract_packages ${STAGEDIR}
-install_packages ${STAGEDIR} ${PRODUCT_TYPE} pear-PHP_CodeSniffer
-# don't want to deinstall in case of testing...
+IMAGE=$(find ${IMAGESDIR} -name "*-${1}-${ARCH}.*")
 
-echo ">>> Running ${COREDIR} test suite..."
+echo ">>> Booting image ${IMAGE}..."
 
-chroot ${STAGEDIR} /bin/sh -es <<EOF
-make -C${COREDIR} setup
-make -C${COREDIR} lint
-make -C${COREDIR} health
-make -C${COREDIR} style
-EOF
+kldstat -qm vmm || kldload vmm
+bhyveload -m 512 -d ${IMAGE} vm0
+bhyve -c 1 -m 512 -AHP \
+    -s 0:0,hostbridge \
+    -s 1:0,virtio-net,tap0 \
+    -s 2:0,ahci-hd,${IMAGE} \
+    -s 31,lpc -l com1,stdio \
+    vm0 || true
+bhyvectl --destroy --vm=vm0

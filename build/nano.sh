@@ -29,11 +29,15 @@
 
 set -e
 
+SELF=nano
+
 . ./common.sh && $(${SCRUB_ARGS})
+
+check_images ${SELF} ${@}
 
 NANOIMG="${IMAGESDIR}/${PRODUCT_RELEASE}-nano-${ARCH}.img"
 
-sh ./clean.sh nano
+sh ./clean.sh ${SELF}
 
 . ${SRCDIR}/tools/tools/nanobsd/FlashDevice.sub
 sub_FlashDevice generic 4g
@@ -41,25 +45,12 @@ sub_FlashDevice generic 4g
 # chop off excess bytes that do not align to 8 byte boundary
 NANO_MEDIASIZE=$(expr ${NANO_MEDIASIZE} - \( ${NANO_MEDIASIZE} % 8 \))
 
-setup_stage ${STAGEDIR}
-setup_base ${STAGEDIR}
-setup_kernel ${STAGEDIR}
-setup_packages ${STAGEDIR}
-
-echo "-S${SERIAL_SPEED} -D" > ${STAGEDIR}/boot.config
-
-cat > ${STAGEDIR}/boot/loader.conf << EOF
-kern.geom.part.check_integrity=0
-boot_multicons="YES"
-boot_serial="YES"
-console="comconsole,vidconsole"
-comconsole_speed="${SERIAL_SPEED}"
-EOF
-
-sed -i '' -e "s:</system>:${SERIAL_CONFIG}<use_mfs_tmpvar/></system>:" \
-    ${STAGEDIR}${CONFIG_XML}
-
-sed -i "" -Ee 's:^ttyu0:ttyu0	"/usr/libexec/getty std.9600"	cons25	on  secure:' ${STAGEDIR}/etc/ttys
+setup_stage ${STAGEDIR} mnt work
+setup_base ${STAGEDIR}/work
+setup_kernel ${STAGEDIR}/work
+setup_packages ${STAGEDIR}/work
+setup_serial ${STAGEDIR}/work
+setup_extras ${STAGEDIR}/work ${SELF}
 
 MD=$(mdconfig -a -t swap -s ${NANO_MEDIASIZE} -x ${NANO_SECTS} -y ${NANO_HEADS})
 
@@ -137,9 +128,7 @@ awk '
 }
 ' | fdisk -i -f - ${MD}
 
-boot0cfg -B -b ${STAGEDIR}/boot/boot0sio -o packet -s 1 -m 3 ${MD}
-MNT=/tmp/nanobsd.${$}
-mkdir -p ${MNT}
+boot0cfg -B -b ${STAGEDIR}/work/boot/boot0sio -o packet -s 1 -m 3 ${MD}
 
 setup_partition()
 {
@@ -157,21 +146,14 @@ setup_partition()
 	umount ${3}
 }
 
-setup_entropy ${STAGEDIR}
-setup_partition /dev/${MD}s1 ${LABEL}0 ${MNT} ${STAGEDIR}
+setup_entropy ${STAGEDIR}/work
+setup_partition /dev/${MD}s1 ${LABEL}0 ${STAGEDIR}/mnt ${STAGEDIR}/work
 
 if [ ${NANO_IMAGES} -gt 1 ]; then
-	setup_entropy ${STAGEDIR}
-	setup_partition /dev/${MD}s2 ${LABEL}1 ${MNT} ${STAGEDIR}
+	setup_entropy ${STAGEDIR}/work
+	setup_partition /dev/${MD}s2 ${LABEL}1 ${STAGEDIR}/mnt ${STAGEDIR}/work
 fi
-
-rm -rf /tmp/nanobsd.*
 
 # move image from RAM to output file
 dd if=/dev/${MD} of=${NANOIMG} bs=64k
-
 mdconfig -d -u ${MD}
-
-echo "done:"
-
-ls -lah ${IMAGESDIR}/*

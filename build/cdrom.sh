@@ -27,25 +27,31 @@
 
 set -e
 
+SELF=cdrom
+
 . ./common.sh && $(${SCRUB_ARGS})
+
+check_images ${SELF} ${@}
 
 CDROM="${IMAGESDIR}/${PRODUCT_RELEASE}-cdrom-${ARCH}.iso"
 
 # rewrite the disk label, because we're install media
 LABEL="${LABEL}_Install"
 
-sh ./clean.sh iso
+sh ./clean.sh ${SELF}
 
 setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}
 setup_kernel ${STAGEDIR}
 setup_packages ${STAGEDIR} ting os-ndpi
-make_brand_boot ${STAGEDIR}
+setup_extras ${STAGEDIR} ${SELF}
+#make_brand_boot ${STAGEDIR}
+echo ">>> loader.conf:"
+cat ${STAGEDIR}/boot/loader.conf
 setup_mtree ${STAGEDIR}
 setup_entropy ${STAGEDIR}
 
-
-echo -n ">>> Building ISO image... "
+echo -n ">>> Building cdrom image... "
 
 # must be upper case:
 LABEL=$(echo ${LABEL} | tr '[:lower:]' '[:upper:]')
@@ -59,6 +65,4 @@ EOF
 makefs -t cd9660 -o bootimage="i386;${STAGEDIR}/boot/cdboot" \
     -o no-emul-boot -o label=${LABEL} -o rockridge ${CDROM} ${STAGEDIR}
 
-echo "done:"
-
-ls -lah ${IMAGESDIR}/*
+echo "done"

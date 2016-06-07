@@ -27,12 +27,12 @@
 
 set -e
 
+SELF=core
+
 . ./common.sh && $(${SCRUB_ARGS})
 
-CORE_MARKER="core"
-
-if [ "$FORCE" != "$CORE_MARKER" ]; then
-    check_packages ${CORE_MARKER} ${@}
+if [ "$FORCE" != "$SELF" ]; then
+    check_packages ${SELF} ${@}
 fi
 
 setup_stage ${STAGEDIR}
@@ -40,6 +40,9 @@ setup_base ${STAGEDIR}
 setup_clone ${STAGEDIR} ${PORTSDIR}
 
 extract_packages ${STAGEDIR}
+# register persistent packages to avoid bouncing
+install_packages ${STAGEDIR} pkg git gettext-tools
+lock_packages ${STAGEDIR}
 
 if [ -z "${*}" ]; then
 	setup_clone ${STAGEDIR} ${COREDIR}
@@ -65,8 +68,10 @@ for CORE_TAG in ${CORE_TAGS}; do
 
 	CORE_DEPS=$(make -C ${STAGEDIR}${COREDIR} depends)
 	remove_packages ${STAGEDIR} ${CORE_NAME}
-	install_packages ${STAGEDIR} git gettext-tools ${CORE_DEPS}
+	if [ -n "${CORE_DEPS}" ]; then
+		install_packages ${STAGEDIR} ${CORE_DEPS}
+	fi
 	custom_packages ${STAGEDIR} ${COREDIR} "${CORE_ARGS}"
 done
 
-bundle_packages ${STAGEDIR} ${CORE_MARKER}
+bundle_packages ${STAGEDIR} ${SELF}

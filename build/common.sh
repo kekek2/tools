@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Copyright (c) 2014-2016 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2010-2011 Scott Ullrich <sullrich@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,15 +35,23 @@ usage()
 	echo "Usage: ${0} -f flavour -n name -v version -R freebsd-ports.git" >&2
 	echo "	-C core.git -P ports.git -S src.git -T tools.git -t type" >&2
 	echo "	-k /path/to/privkey -K /path/to/pubkey -m web_mirror" >&2
-	echo "  [ -l customsigncheck -L customsigncommand ]" >&2
+	echo "  -d device [ -l customsigncheck -L customsigncommand ]" >&2
 	echo "  [ -o stagedirprefix ] [...]" >&2
 	exit 1
 }
 
-while getopts C:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v:F: OPT; do
+while getopts C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
 	case ${OPT} in
 	C)
 		export COREDIR=${OPTARG}
+		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
+		;;
+	c)
+		export PRODUCT_SPEED=${OPTARG}
+		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
+		;;
+	d)
+		export PRODUCT_DEVICE=${OPTARG}
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
 	f)
@@ -133,6 +142,8 @@ if [ -z "${PRODUCT_NAME}" -o \
     -z "${PRODUCT_MIRROR}" -o \
     -z "${PRODUCT_PRIVKEY}" -o \
     -z "${PRODUCT_PUBKEY}" -o \
+    -z "${PRODUCT_DEVICE}" -o \
+    -z "${PRODUCT_SPEED}" -o \
     -z "${TOOLSDIR}" -o \
     -z "${PLUGINSDIR}" -o \
     -z "${PORTSDIR}" -o \
@@ -147,12 +158,6 @@ export PRODUCT_SIGNCMD=${PRODUCT_SIGNCMD:-"${TOOLSDIR}/scripts/pkg_sign.sh ${PRO
 export PRODUCT_SIGNCHK=${PRODUCT_SIGNCHK:-"${TOOLSDIR}/scripts/pkg_fingerprint.sh ${PRODUCT_PUBKEY}"}
 export PRODUCT_RELEASE="${PRODUCT_NAME}-${PRODUCT_VERSION}-${PRODUCT_FLAVOUR}"
 
-# serial bootstrapping
-SERIAL_CONFIG="<enableserial>1</enableserial>"
-SERIAL_CONFIG="${SERIAL_CONFIG}<serialspeed>${SERIAL_SPEED}</serialspeed>"
-export SERIAL_CONFIG="${SERIAL_CONFIG}<primaryconsole>serial</primaryconsole>"
-export SERIAL_SPEED="115200"
-
 # misc. foo
 export CONFIG_PKG="/usr/local/etc/pkg/repos/origin.conf"
 export CPUS=$(sysctl kern.smp.cpus | awk '{ print $2 }')
@@ -162,15 +167,16 @@ export LABEL=${PRODUCT_NAME}
 export TARGET_ARCH=${ARCH}
 export TARGETARCH=${ARCH}
 
-# define target directories
+# define build and config directories
 export CONFIGDIR="${TOOLSDIR}/config/${PRODUCT_SETTINGS}"
 export STAGEDIR="${STAGEDIRPREFIX}${CONFIGDIR}/${PRODUCT_FLAVOUR}"
-export IMAGESDIR="/tmp/images"
-export SETSDIR="/tmp/sets"
+export DEVICEDIR="${TOOLSDIR}/device"
 export PACKAGESDIR="/.pkg"
 
-# bootstrap target directories
-mkdir -p ${STAGEDIR} ${IMAGESDIR} ${SETSDIR}
+# define and bootstrap target directories
+export IMAGESDIR="/tmp/images"
+export SETSDIR="/tmp/sets"
+mkdir -p ${IMAGESDIR} ${SETSDIR}
 
 # print environment to showcase all of our variables
 env | sort
@@ -262,6 +268,23 @@ setup_copy()
 	cp -r ${2} ${1}${2}
 }
 
+setup_memstick()
+{
+	cat > ${1}/etc/fstab << EOF
+# Device	Mountpoint	FStype	Options	Dump	Pass#
+/dev/ufs/${3}	/	ufs	ro,noatime	1	1
+tmpfs		/tmp		tmpfs	rw,mode=01777	0	0
+EOF
+
+	makefs -t ffs -B little -o label=${3} ${2} ${1}
+
+	DEV=$(mdconfig -a -t vnode -f "${2}")
+	gpart create -s BSD "${DEV}"
+	gpart bootcode -b "${1}"/boot/boot "${DEV}"
+	gpart add -t freebsd-ufs "${DEV}"
+	mdconfig -d -u "${DEV}"
+}
+
 setup_chroot()
 {
 	echo ">>> Setting up chroot in ${1}"
@@ -274,7 +297,7 @@ setup_chroot()
 setup_marker()
 {
 	# Let opnsense-update(8) know it's up to date
-	local MARKER="/usr/local/opnsense/version/opnsense-update.${3}"
+	MARKER="/usr/local/opnsense/version/opnsense-update.${3}"
 
 	if [ ! -f ${1}${MARKER} ]; then
 		# first call means bootstrap the marker file
@@ -360,20 +383,34 @@ generate_signature()
 	fi
 }
 
+check_images()
+{
+	SELF=${1}
+	SKIP=${2}
+
+	IMAGE=$(find ${IMAGESDIR} -name "*-${SELF}-${ARCH}.*")
+
+	if [ -f "${IMAGE}" -a -z "${SKIP}" ]; then
+		echo ">>> Reusing ${SELF} image: ${IMAGE}"
+		exit 0
+	fi
+}
+
 check_packages()
 {
-	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${ARCH}.tar")
-	MARKER=${1}
+	SELF=${1}
 	SKIP=${2}
 	echo "MARKER: ${MARKER}, SKIP: ${SKIP}"
 
-	if [ -z "${MARKER}" -o -z "${PACKAGESET}" -o -n "${SKIP}" ]; then
+	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${ARCH}.tar")
+
+	if [ -z "${SELF}" -o -z "${PACKAGESET}" -o -n "${SKIP}" ]; then
 		return
 	fi
 
-	DONE=$(tar tf ${PACKAGESET} | grep "^\./\.${MARKER}_done\$" || true)
+	DONE=$(tar tf ${PACKAGESET} | grep "^\./\.${SELF}_done\$" || true)
 	if [ -n "${DONE}" ]; then
-		echo ">>> Packages (${MARKER}) are up to date"
+		echo ">>> Packages (${SELF}) are up to date"
 		exit 0
 	fi
 }
@@ -412,15 +449,31 @@ remove_packages()
 	done
 }
 
+lock_packages()
+{
+	BASEDIR=${1}
+	shift
+	PKGLIST=${@}
+	if [ -z "${PKGLIST}" ]; then
+		PKGLIST="-a"
+	fi
+
+	echo ">>> Locking packages in ${BASEDIR}: ${PKGLIST}"
+
+	for PKG in ${PKGLIST}; do
+		pkg -c ${BASEDIR} lock -qy ${PKG}
+	done
+}
+
 install_packages()
 {
-	echo ">>> Installing packages in ${1}..."
-
 	BASEDIR=${1}
 	shift
 	PKGLIST=${@}
 	
 	echo ">>> PKGLIST: ${PKGLIST}"
+
+	echo ">>> Installing packages in ${BASEDIR}: ${PKGLIST}"
 
 	# remove previous packages for a clean environment
 	pkg -c ${BASEDIR} remove -fya
@@ -444,7 +497,7 @@ install_packages()
 		for PKG in pkg ${PKGLIST}; do
 			# Adds all selected packages and fails if
 			# one cannot be installed.  Used to build
-			# final images or regression test systems.
+			# a runtime environment.
 			PKGFOUND=
 			for PKGFILE in $({
 				cd ${BASEDIR}
@@ -464,8 +517,8 @@ install_packages()
 		done
 	fi
 
-	# collect all installed packages
-	PKGLIST="$(pkg -c ${BASEDIR} query %n)"
+	# collect all installed packages (minus locked packages)
+	PKGLIST="$(pkg -c ${BASEDIR} query -e "%k != 1" %n)"
 
 	for PKG in ${PKGLIST}; do
 		# add, unlike install, is not aware of repositories :(
@@ -481,10 +534,8 @@ custom_packages()
 rm -rf ${1}
 
 # run the package build process
+make -C ${2} DESTDIR=${1} ${3} FLAVOUR=${PRODUCT_FLAVOUR} metadata
 make -C ${2} DESTDIR=${1} ${3} FLAVOUR=${PRODUCT_FLAVOUR} install
-make -C ${2} DESTDIR=${1} ${3} scripts
-make -C ${2} DESTDIR=${1} ${3} manifest > ${1}/+MANIFEST
-make -C ${2} DESTDIR=${1} ${3} plist > ${1}/plist
 
 echo "$(pwd) content:"
 ls -la ${1}/
@@ -499,11 +550,14 @@ EOF
 bundle_packages()
 {
 	BASEDIR=${1}
-	MARKER=${2}
+	SELF=${2}
 
 	sh ./clean.sh packages
 
 	git_describe ${PORTSDIR}
+
+	# clean up in case of partial run
+	rm -rf ${BASEDIR}${PACKAGESDIR}-new
 
 	# rebuild expected FreeBSD structure
 	mkdir -p ${BASEDIR}${PACKAGESDIR}-new/Latest
@@ -516,9 +570,9 @@ bundle_packages()
 		cp ${PROGRESS} ${BASEDIR}${PACKAGESDIR}-new
 	done
 
-	if [ -n "${MARKER}" ]; then
+	if [ -n "${SELF}" ]; then
 		# add build marker to set
-		touch ${BASEDIR}${PACKAGESDIR}-new/.${MARKER}_done
+		touch ${BASEDIR}${PACKAGESDIR}-new/.${SELF}_done
 	fi
 
 	# push packages to home location
@@ -559,6 +613,61 @@ setup_packages()
 	clean_packages ${1}
 }
 
+setup_serial()
+{
+	SERIAL_CONFIG="<enableserial>1</enableserial>"
+	SERIAL_CONFIG="${SERIAL_CONFIG}<serialspeed>${PRODUCT_SPEED}</serialspeed>"
+	SERIAL_CONFIG="${SERIAL_CONFIG}<primaryconsole>serial</primaryconsole>"
+
+	echo "-S${PRODUCT_SPEED} -D" > ${1}/boot.config
+
+	cat > ${1}/boot/loader.conf << EOF
+boot_multicons="YES"
+boot_serial="YES"
+console="comconsole,vidconsole"
+comconsole_speed="${PRODUCT_SPEED}"
+autoboot_delay="2"
+EOF
+
+	sed -i '' -e "s:</system>:${SERIAL_CONFIG}</system>:" ${1}${CONFIG_XML}
+}
+
+_setup_extras_generic()
+{
+	if [ ! -f ${CONFIGDIR}/extras.conf ]; then
+		return
+	fi
+
+	. ${CONFIGDIR}/extras.conf
+
+	if [ -n "$(type ${2}_hook 2> /dev/null)" ]; then
+		echo ">>> Begin extra: ${2}_hook"
+		${2}_hook ${1}
+		echo ">>> End extra: ${2}_hook"
+	fi
+}
+
+_setup_extras_device()
+{
+	if [ ! -f ${DEVICEDIR}/${PRODUCT_DEVICE}.conf ]; then
+		return
+	fi
+
+	. ${DEVICEDIR}/${PRODUCT_DEVICE}.conf
+
+	if [ -n "$(type ${2}_hook 2> /dev/null)" ]; then
+		echo ">>> Begin ${PRODUCT_DEVICE} extra: ${2}_hook"
+		${2}_hook ${1}
+		echo ">>> End ${PRODUCT_DEVICE} extra: ${2}_hook"
+	fi
+}
+
+setup_extras()
+{
+	_setup_extras_generic ${@}
+	_setup_extras_device ${@}
+}
+
 setup_mtree()
 {
 	echo ">>> Creating mtree summary of files present..."
@@ -579,21 +688,37 @@ setup_stage()
 {
 	echo ">>> Setting up stage in ${1}"
 
-	local MOUNTDIRS="/dev ${SRCDIR} ${PORTSDIR} ${COREDIR} ${PLUGINSDIR}"
+	MOUNTDIRS="/dev /mnt ${SRCDIR} ${PORTSDIR} ${COREDIR} ${PLUGINSDIR}"
+	STAGE=${1}
+
+	shift
+
+	# kill stale pids for chrooted daemons
+	if [ -d ${STAGE}/var/run ]; then
+		PIDS=$(find ${STAGE}/var/run -name "*.pid")
+		for PID in ${PIDS}; do
+			pkill -F ${PID};
+		done
+	fi
 
 	# might have been a chroot
 	for DIR in ${MOUNTDIRS}; do
-		if [ -d ${1}${DIR} ]; then
-			umount ${1}${DIR} 2> /dev/null || true
+		if [ -d ${STAGE}${DIR} ]; then
+			umount ${STAGE}${DIR} 2> /dev/null || true
 		fi
 	done
 
 	# remove base system files
-	rm -rf ${1} 2> /dev/null ||
-	    (chflags -R noschg ${1}; rm -rf ${1} 2> /dev/null)
+	rm -rf ${STAGE} 2> /dev/null ||
+	    (chflags -R noschg ${STAGE}; rm -rf ${STAGE} 2> /dev/null)
 
 	# revive directory for next run
-	mkdir -p ${1}
+	mkdir -p ${STAGE}
+
+	# additional directories if requested
+	for DIR in ${@}; do
+		mkdir -p ${STAGE}/${DIR}
+	done
 }
 
 make_brand_boot()

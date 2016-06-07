@@ -27,8 +27,10 @@
 
 set -e
 
+SELF=chroot
+
 . ./common.sh && $(${SCRUB_ARGS})
 
-echo ">>> chroot'ing into ${STAGEDIR}..."
+echo ">>> chroot'ing into ${STAGEDIR}/${1}..."
 
-chroot ${STAGEDIR} /bin/csh
+chroot ${STAGEDIR}/${1} /bin/csh
