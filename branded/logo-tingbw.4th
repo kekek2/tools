@@ -34,9 +34,9 @@
 
 : logo ( x y -- ) \ B/W Orb mascot (24 rows x 34 columns)
 
-	s"               ...  .            " logo+
-	s"            .MMMMM  MMM.         " logo+
-	s"           ...  ........         " logo+
+	s"                                 " logo+
+	s"                                 " logo+
+	s"            ..  .......          " logo+
 	s"         ..NM  MMMMMMMMM.        " logo+
 	s"       ..MM.    .....  .MMM.     " logo+
 	s"       MM.   MMMMMMMMM.   ^M     " logo+

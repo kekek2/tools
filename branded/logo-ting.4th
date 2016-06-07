@@ -37,9 +37,9 @@
 
 : logo ( x y -- ) \ color BSD mascot (24 rows x 34 columns)
 
-	s"               @[32m...  .            " logo+
-	s"            .MMMMM  MMM.         " logo+
-	s"           ...  ........         " logo+
+	s"               @[32m                  " logo+
+	s"                                 " logo+
+	s"            ..  .......          " logo+
 	s"         ..NM  MMMMMMMMM.        " logo+
 	s"       ..MM.    .....  .MMM.     " logo+
 	s"       MM.   MMMMMMMMM.   ^M     " logo+
@@ -60,7 +60,7 @@
 	s"      .MM. .MMMMM  MMMM.   M7    " logo+
 	s"        . M..  `^  `  .:M        " logo+
 	s"          .MMMMMMMMMMMMM,.       " logo+
-	s"             ``^:MMI^`           " logo+
+	s"             ``^:MMI^`@[m           " logo+
 
 	2drop
 ;

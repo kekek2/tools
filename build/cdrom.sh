@@ -45,9 +45,6 @@ setup_base ${STAGEDIR}
 setup_kernel ${STAGEDIR}
 setup_packages ${STAGEDIR} ting os-ndpi
 setup_extras ${STAGEDIR} ${SELF}
-#make_brand_boot ${STAGEDIR}
-echo ">>> loader.conf:"
-cat ${STAGEDIR}/boot/loader.conf
 setup_mtree ${STAGEDIR}
 setup_entropy ${STAGEDIR}
 
