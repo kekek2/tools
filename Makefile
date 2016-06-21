@@ -86,3 +86,11 @@ ${STEP}: lint
 	    -m ${MIRRORS:Ox:[1]} -o "${STAGEDIRPREFIX}" -c ${SPEED} -F ${FORCE} \
 	    ${${STEP}_ARGS}
 .endfor
+
+deploy:
+	rm -rf /tmp/sets/pkg/*
+	cd /tmp/sets/pkg && tar -xf /tmp/sets/packages*
+	rm /tmp/sets/pkg/All/os-ting-dev-repo*
+	cp /tmp/sets/base-* /tmp/sets/sets/
+	cp /tmp/sets/kernel-* /tmp/sets/sets/
+	cd ${.CURDIR}/ansible && ansible-playbook deploy-world
