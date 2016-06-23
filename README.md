@@ -254,3 +254,22 @@ command will use chroot(8) to enter the active build jail:
 There's also the posh way to boot a final image using bhyve(8):
 
     # make boot-<image>
+
+About TING tweaks
+==============================
+
+To build ting-update packet:
+
+    # make ting_update
+    
+To deploy to production:
+
+    # make deploy
+    
+To force rebuild core
+
+    # make core FORCE=core
+
+To force rebuild plugins:
+
+    # make plugins FORCE=plugins
