@@ -88,9 +88,13 @@ ${STEP}: lint
 .endfor
 
 deploy:
-	rm -rf /tmp/sets/pkg/*
-	cd /tmp/sets/pkg && tar -xf /tmp/sets/packages*
-	rm /tmp/sets/pkg/All/os-ting-dev-repo*
-	cp /tmp/sets/base-* /tmp/sets/sets/
-	cp /tmp/sets/kernel-* /tmp/sets/sets/
+	rm -rf /tmp/deploy/pkg/*
+	cd /tmp/deploy/pkg && tar -xf /tmp/sets/packages*
+	rm /tmp/deploy/pkg/All/os-ting-dev-repo*
+	cp /tmp/sets/base-* /tmp/deploy/sets/
+	cp /tmp/sets/kernel-* /tmp/deploy/sets/
 	cd ${.CURDIR}/ansible && ansible-playbook deploy-world
+
+stats:
+	@cd ${.CURDIR}/build && sh ./stats.sh
+

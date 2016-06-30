@@ -1,8 +1,8 @@
 ---
 - hosts: ting-repo
   vars:
-    packages_all: /tmp/sets/pkg/All
-    sets: /tmp/sets/sets
+    packages_all: /tmp/deploy/pkg/All
+    sets: /tmp/deploy/sets
     version: 1.0.0
     abi: FreeBSD:10:amd64
     repo: /opt/ting-repo/{{abi}}/{{version}}
