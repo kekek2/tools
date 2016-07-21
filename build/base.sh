@@ -31,7 +31,7 @@ SELF=base
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-BASE_SET=$(find ${SETSDIR} -name "base-*-${ARCH}.txz")
+BASE_SET=$(find ${SETSDIR} -name "base-*-${PRODUCT_ARCH}.txz")
 
 if [ -f "${BASE_SET}" -a -z "${1}" ]; then
 	echo ">>> Reusing base set: ${BASE_SET}"
@@ -44,18 +44,14 @@ fi
 
 git_describe ${SRCDIR}
 
-BASE_SET=${SETSDIR}/base-${REPO_VERSION}-${ARCH}
+BASE_SET=${SETSDIR}/base-${REPO_VERSION}-${PRODUCT_ARCH}
 
 sh ./clean.sh ${SELF}
 
 setup_stage ${STAGEDIR}
 
-MAKE_ARGS="SRCCONF=${CONFIGDIR}/src.conf COMPILER_TYPE=clang __MAKE_CONF="
-ENV_FILTER="env -i USER=${USER} LOGNAME=${LOGNAME} HOME=${HOME} \
-SHELL=${SHELL} BLOCKSIZE=${BLOCKSIZE} MAIL=${MAIL} PATH=${PATH} \
-TERM=${TERM} HOSTTYPE=${HOSTTYPE} VENDOR=${VENDOR} OSTYPE=${OSTYPE} \
-MACHTYPE=${MACHTYPE} PWD=${PWD} GROUP=${GROUP} HOST=${HOST} \
-EDITOR=${EDITOR} PAGER=${PAGER}"
+MAKE_ARGS="TARGET_ARCH=${PRODUCT_ARCH} TARGET=${PRODUCT_TARGET}"
+MAKE_ARGS="${MAKE_ARGS} SRCCONF=${CONFIGDIR}/src.conf __MAKE_CONF="
 
 ${ENV_FILTER} make -s -C${SRCDIR} -j${CPUS} buildworld ${MAKE_ARGS} NO_CLEAN=yes
 ${ENV_FILTER} make -s -C${SRCDIR}/release obj ${MAKE_ARGS}
@@ -69,14 +65,14 @@ tar -tf ${BASE_SET}.txz | \
     sed -e 's/^\.//g' -e '/\/$/d' | sort > ${STAGEDIR}/setdiff.new
 
 : > ${STAGEDIR}/setdiff.old
-if [ -s ${CONFIGDIR}/plist.base.${ARCH} ]; then
-	cat ${CONFIGDIR}/plist.base.${ARCH} | \
+if [ -s ${CONFIGDIR}/plist.base.${PRODUCT_ARCH} ]; then
+	cat ${CONFIGDIR}/plist.base.${PRODUCT_ARCH} | \
 	    sed -e 's/^\.//g' -e '/\/$/d' | sort > ${STAGEDIR}/setdiff.old
 fi
 
 : > ${STAGEDIR}/setdiff.tmp
-if [ -s ${CONFIGDIR}/plist.obsolete.${ARCH} ]; then
-	diff -u ${CONFIGDIR}/plist.obsolete.${ARCH} \
+if [ -s ${CONFIGDIR}/plist.obsolete.${PRODUCT_ARCH} ]; then
+	diff -u ${CONFIGDIR}/plist.obsolete.${PRODUCT_ARCH} \
 	    ${STAGEDIR}/setdiff.new | grep '^-/' | \
 	    cut -b 2- > ${STAGEDIR}/setdiff.tmp
 fi

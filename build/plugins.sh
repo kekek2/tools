@@ -35,29 +35,28 @@ if [ "$FORCE" != "$SELF" ]; then
     check_packages ${SELF} ${@}
 fi
 
-if [ -z "${*}" ]; then
-	PLUGINS_LIST=$(make -C ${PLUGINSDIR} list)
-else
-	PLUGINS_LIST="${*}"
-fi
-
 setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}
 setup_clone ${STAGEDIR} ${PLUGINSDIR}
+setup_chroot ${STAGEDIR}
 
 extract_packages ${STAGEDIR}
-# register persistent packages to avoid bouncing
+remove_packages ${STAGEDIR} ${@}
 install_packages ${STAGEDIR} pkg git
 lock_packages ${STAGEDIR}
+
+PLUGINS_LIST=$(make -C ${PLUGINSDIR} list)
 
 for PLUGIN in ${PLUGINS_LIST}; do
 	PLUGIN_NAME=$(make -C ${PLUGINSDIR}/${PLUGIN} name)
 	PLUGIN_DEPS=$(make -C ${PLUGINSDIR}/${PLUGIN} depends)
 
-	remove_packages ${STAGEDIR} ${PLUGIN_NAME}
-	if [ -n "${PLUGIN_DEPS}" ]; then
-		install_packages ${STAGEDIR} ${PLUGIN_DEPS}
+	if search_packages ${STAGEDIR} ${PLUGIN_NAME}; then
+		# already built
+		continue
 	fi
+
+	install_packages ${STAGEDIR} ${PLUGIN_DEPS}
 	custom_packages ${STAGEDIR} ${PLUGINSDIR}/${PLUGIN}
 done
 

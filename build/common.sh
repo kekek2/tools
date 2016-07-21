@@ -35,13 +35,27 @@ usage()
 	echo "Usage: ${0} -f flavour -n name -v version -R freebsd-ports.git" >&2
 	echo "	-C core.git -P ports.git -S src.git -T tools.git -t type" >&2
 	echo "	-k /path/to/privkey -K /path/to/pubkey -m web_mirror" >&2
-	echo "  -d device [ -l customsigncheck -L customsigncommand ]" >&2
-	echo "  [ -o stagedirprefix ] [...]" >&2
+	echo "	-d device [ -l customsigncheck -L customsigncommand ]" >&2
+	echo "	[ -o stagedirprefix ] [...]" >&2
 	exit 1
 }
 
-while getopts C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
+while getopts a:C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:U:u:v: OPT; do
 	case ${OPT} in
+	a)
+		case ${OPTARG} in
+		amd64|i386|arm:armv6)
+			export PRODUCT_TARGET=${OPTARG%%:*}
+			export PRODUCT_ARCH=${OPTARG##*:}
+			export PRODUCT_HOST=$(uname -m)
+			SCRUB_ARGS=${SCRUB_ARGS};shift;shift
+			;;
+		*)
+			echo "ARCH wants amd64, arm:armv6 or i386" >&2
+			exit 1
+			;;
+		esac
+		;;
 	C)
 		export COREDIR=${OPTARG}
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
@@ -59,11 +73,15 @@ while getopts C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
 	K)
-		export PRODUCT_PUBKEY=${OPTARG}
+		if [ -n "${OPTARG}" ]; then
+			export PRODUCT_PUBKEY=${OPTARG}
+		fi
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
 	k)
-		export PRODUCT_PRIVKEY=${OPTARG}
+		if [ -n "${OPTARG}" ]; then
+			export PRODUCT_PRIVKEY=${OPTARG}
+		fi
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
 	L)
@@ -120,6 +138,24 @@ while getopts C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
 		export PRODUCT_TYPE=${OPTARG}
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
+	U)
+		case "${OPTARG}" in
+		''|-stable|-devel)
+			export PRODUCT_SUFFIX=${OPTARG}
+			SCRUB_ARGS=${SCRUB_ARGS};shift;shift
+			;;
+		*)
+			echo "SUFFIX wants empty string, -stable or -devel" >&2
+			exit 1
+			;;
+		esac
+		;;
+	u)
+		if [ "${OPTARG}" = "yes" ]; then
+			export PRODUCT_UEFI=${OPTARG}
+		fi
+		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
+		;;
 	v)
 		export PRODUCT_VERSION=${OPTARG}
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
@@ -129,6 +165,7 @@ while getopts C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:v: OPT; do
 		SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 		;;
 	*)
+		echo "Unknown argument '${OPT}'" >&2
 		usage
 		;;
 	esac
@@ -136,12 +173,11 @@ done
 
 if [ -z "${PRODUCT_NAME}" -o \
     -z "${PRODUCT_TYPE}" -o \
+    -z "${PRODUCT_ARCH}" -o \
     -z "${PRODUCT_FLAVOUR}" -o \
     -z "${PRODUCT_VERSION}" -o \
     -z "${PRODUCT_SETTINGS}" -o \
     -z "${PRODUCT_MIRROR}" -o \
-    -z "${PRODUCT_PRIVKEY}" -o \
-    -z "${PRODUCT_PUBKEY}" -o \
     -z "${PRODUCT_DEVICE}" -o \
     -z "${PRODUCT_SPEED}" -o \
     -z "${TOOLSDIR}" -o \
@@ -153,23 +189,20 @@ if [ -z "${PRODUCT_NAME}" -o \
 	usage
 fi
 
-# automatically expanded product stuff
-export PRODUCT_SIGNCMD=${PRODUCT_SIGNCMD:-"${TOOLSDIR}/scripts/pkg_sign.sh ${PRODUCT_PUBKEY} ${PRODUCT_PRIVKEY}"}
-export PRODUCT_SIGNCHK=${PRODUCT_SIGNCHK:-"${TOOLSDIR}/scripts/pkg_fingerprint.sh ${PRODUCT_PUBKEY}"}
-export PRODUCT_RELEASE="${PRODUCT_NAME}-${PRODUCT_VERSION}-${PRODUCT_FLAVOUR}"
-
 # misc. foo
-export CONFIG_PKG="/usr/local/etc/pkg/repos/origin.conf"
 export CPUS=$(sysctl kern.smp.cpus | awk '{ print $2 }')
 export CONFIG_XML="/usr/local/etc/config.xml"
-export ARCH=${ARCH:-$(uname -m)}
+export ABI_FILE="/usr/lib/crt1.o"
 export LABEL=${PRODUCT_NAME}
-export TARGET_ARCH=${ARCH}
-export TARGETARCH=${ARCH}
+export ENV_FILTER="env -i USER=${USER} LOGNAME=${LOGNAME} HOME=${HOME} \
+SHELL=${SHELL} BLOCKSIZE=${BLOCKSIZE} MAIL=${MAIL} PATH=${PATH} \
+TERM=${TERM} HOSTTYPE=${HOSTTYPE} VENDOR=${VENDOR} OSTYPE=${OSTYPE} \
+MACHTYPE=${MACHTYPE} PWD=${PWD} GROUP=${GROUP} HOST=${HOST} \
+EDITOR=${EDITOR} PAGER=${PAGER} ABI_FILE=${ABI_FILE}"
 
 # define build and config directories
 export CONFIGDIR="${TOOLSDIR}/config/${PRODUCT_SETTINGS}"
-export STAGEDIR="${STAGEDIRPREFIX}${CONFIGDIR}/${PRODUCT_FLAVOUR}"
+export STAGEDIR="${STAGEDIRPREFIX}${CONFIGDIR}/${PRODUCT_FLAVOUR}:${PRODUCT_ARCH}"
 export DEVICEDIR="${TOOLSDIR}/device"
 export PACKAGESDIR="/.pkg"
 
@@ -178,8 +211,19 @@ export IMAGESDIR="/tmp/images"
 export SETSDIR="/tmp/sets"
 mkdir -p ${IMAGESDIR} ${SETSDIR}
 
-# print environment to showcase all of our variables
-env | sort
+# automatically expanded product stuff
+export PRODUCT_PRIVKEY=${PRODUCT_PRIVKEY:-"${CONFIGDIR}/repo.key"}
+export PRODUCT_PUBKEY=${PRODUCT_PUBKEY:-"${CONFIGDIR}/repo.pub"}
+export PRODUCT_SIGNCMD=${PRODUCT_SIGNCMD:-"${TOOLSDIR}/scripts/pkg_sign.sh ${PRODUCT_PUBKEY} ${PRODUCT_PRIVKEY}"}
+export PRODUCT_SIGNCHK=${PRODUCT_SIGNCHK:-"${TOOLSDIR}/scripts/pkg_fingerprint.sh ${PRODUCT_PUBKEY}"}
+export PRODUCT_RELEASE="${PRODUCT_NAME}-${PRODUCT_VERSION}-${PRODUCT_FLAVOUR}"
+export PRODUCT_PKGNAMES="${PRODUCT_TYPE} ${PRODUCT_TYPE}-stable ${PRODUCT_TYPE}-devel"
+export PRODUCT_PKGNAME="${PRODUCT_TYPE}${PRODUCT_SUFFIX}"
+
+if [ "${SELF}" != print ]; then
+	# print environment to showcase all of our variables
+	env | sort
+fi
 
 git_checkout()
 {
@@ -268,30 +312,30 @@ setup_copy()
 	cp -r ${2} ${1}${2}
 }
 
-setup_memstick()
-{
-	cat > ${1}/etc/fstab << EOF
-# Device	Mountpoint	FStype	Options	Dump	Pass#
-/dev/ufs/${3}	/	ufs	ro,noatime	1	1
-tmpfs		/tmp		tmpfs	rw,mode=01777	0	0
-EOF
-
-	makefs -t ffs -B little -o label=${3} ${2} ${1}
-
-	DEV=$(mdconfig -a -t vnode -f "${2}")
-	gpart create -s BSD "${DEV}"
-	gpart bootcode -b "${1}"/boot/boot "${DEV}"
-	gpart add -t freebsd-ufs "${DEV}"
-	mdconfig -d -u "${DEV}"
-}
-
 setup_chroot()
 {
 	echo ">>> Setting up chroot in ${1}"
 
+	if [ ${PRODUCT_HOST} != ${PRODUCT_ARCH} ]; then
+		# additional emulation layer so that chroot
+		# looks like a native environment later on
+		mkdir -p ${1}/usr/local/bin
+		cp /usr/local/bin/qemu-${PRODUCT_TARGET}-static \
+		    ${1}/usr/local/bin
+		/usr/local/etc/rc.d/qemu_user_static onerestart
+
+		# copy the native toolchain for extra speed
+		XTOOLS_SET=$(find ${SETSDIR} -name "xtools-*-${PRODUCT_ARCH}.txz")
+		if [ -n "${XTOOLS_SET}" ]; then
+			tar -C ${1} -xpf ${XTOOLS_SET} \
+			    --exclude="./bin/sh" \
+			    --exclude="./usr/bin/flex"
+		fi
+	fi
+
 	cp /etc/resolv.conf ${1}/etc
 	mount -t devfs devfs ${1}/dev
-	chroot ${1} /etc/rc.d/ldconfig start
+	chroot ${1} /bin/sh /etc/rc.d/ldconfig start
 }
 
 setup_marker()
@@ -312,7 +356,7 @@ setup_base()
 
 	echo ">>> Setting up world in ${1}"
 
-	BASE_SET=$(find ${SETSDIR} -name "base-*-${ARCH}.txz")
+	BASE_SET=$(find ${SETSDIR} -name "base-*-${PRODUCT_ARCH}.txz")
 
 	tar -C ${1} -xpf ${BASE_SET}
 
@@ -337,7 +381,7 @@ setup_kernel()
 
 	echo ">>> Setting up kernel in ${1}"
 
-	KERNEL_SET=$(find ${SETSDIR} -name "kernel-*-${ARCH}.txz")
+	KERNEL_SET=$(find ${SETSDIR} -name "kernel-*-${PRODUCT_ARCH}.txz")
 
 	tar -C ${1} -xpf ${KERNEL_SET}
 
@@ -388,7 +432,7 @@ check_images()
 	SELF=${1}
 	SKIP=${2}
 
-	IMAGE=$(find ${IMAGESDIR} -name "*-${SELF}-${ARCH}.*")
+	IMAGE=$(find ${IMAGESDIR} -name "*-${SELF}-${PRODUCT_ARCH}.*")
 
 	if [ -f "${IMAGE}" -a -z "${SKIP}" ]; then
 		echo ">>> Reusing ${SELF} image: ${IMAGE}"
@@ -402,7 +446,7 @@ check_packages()
 	SKIP=${2}
 	echo "MARKER: ${MARKER}, SKIP: ${SKIP}"
 
-	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${ARCH}.tar")
+	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${PRODUCT_ARCH}.tar")
 
 	if [ -z "${SELF}" -o -z "${PACKAGESET}" -o -n "${SKIP}" ]; then
 		return
@@ -424,10 +468,37 @@ extract_packages()
 	rm -rf ${BASEDIR}${PACKAGESDIR}/All
 	mkdir -p ${BASEDIR}${PACKAGESDIR}/All
 
-	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${ARCH}.tar")
+	PACKAGESET=$(find ${SETSDIR} -name "packages-*-${PRODUCT_FLAVOUR}-${PRODUCT_ARCH}.tar")
 	if [ -f "${PACKAGESET}" ]; then
 		tar -C ${BASEDIR}${PACKAGESDIR} -xpf ${PACKAGESET}
 	fi
+}
+
+search_packages()
+{
+	BASEDIR=${1}
+	shift
+	PKGLIST=${@}
+
+	echo ">>> Searching packages in ${BASEDIR}: ${PKGLIST}"
+
+	for PKG in ${PKGLIST}; do
+		# exact matching according to package name
+		for PKGFILE in $(cd ${BASEDIR}${PACKAGESDIR}; \
+		    find All -type f); do
+			PKGINFO=$(pkg -c ${BASEDIR} info -F ${PACKAGESDIR}/${PKGFILE} | grep ^Name | awk '{ print $3; }')
+			if [ ${PKG} = ${PKGINFO} ]; then
+				return 0
+			fi
+		done
+		# match using globbing as a second pass
+		for PKGGLOB in $(cd ${BASEDIR}${PACKAGESDIR}; \
+		    find All -name "${PKG}" -type f); do
+			return 0
+		done
+	done
+
+	return 1
 }
 
 remove_packages()
@@ -439,12 +510,18 @@ remove_packages()
 	echo ">>> Removing packages in ${BASEDIR}: ${PKGLIST}"
 
 	for PKG in ${PKGLIST}; do
-		# clear out the ports that ought to be rebuilt
-		for PKGFILE in $(cd ${BASEDIR}${PACKAGESDIR}; find All -type f); do
+		# exact matching according to package name
+		for PKGFILE in $(cd ${BASEDIR}${PACKAGESDIR}; \
+		    find All -type f); do
 			PKGINFO=$(pkg -c ${BASEDIR} info -F ${PACKAGESDIR}/${PKGFILE} | grep ^Name | awk '{ print $3; }')
 			if [ ${PKG} = ${PKGINFO} ]; then
 				rm ${BASEDIR}${PACKAGESDIR}/${PKGFILE}
 			fi
+		done
+		# match using globbing as a second pass
+		for PKGGLOB in $(cd ${BASEDIR}${PACKAGESDIR}; \
+		    find All -name "${PKG}" -type f); do
+			rm ${BASEDIR}${PACKAGESDIR}/${PKGGLOB}
 		done
 	done
 }
@@ -465,6 +542,22 @@ lock_packages()
 	done
 }
 
+bootstrap_packages()
+{
+	BASEDIR=${1}
+
+	echo ">>> Bootstrapping packages in ${BASEDIR}"
+
+	for PKG in $(cd ${BASEDIR}; find .${PACKAGESDIR}/All -type f); do
+		# Adds all available packages and removes the
+		# ones that cannot be installed due to missing
+		# dependencies.  This behaviour is desired.
+		if ! pkg -c ${BASEDIR} add ${PKG}; then
+			rm -r ${BASEDIR}/${PKG}
+		fi
+	done
+}
+
 install_packages()
 {
 	BASEDIR=${1}
@@ -478,44 +571,26 @@ install_packages()
 	# remove previous packages for a clean environment
 	pkg -c ${BASEDIR} remove -fya
 
-	if [ -z "${PKGLIST}" ]; then
-		for PKG in $({
+	# Adds all selected packages and fails if one cannot
+	# be installed.  Used to build a runtime environment.
+	for PKG in pkg ${PKGLIST}; do
+		PKGFOUND=
+		for PKGFILE in $({
 			cd ${BASEDIR}
-			# find all package files, omitting plugins
-			find .${PACKAGESDIR}/All -type f \
-			    \! -name "os-*" \! -name "ospriv-*"
+			find .${PACKAGESDIR}/All -name "${PKG}-*.txz"
 		}); do
-			# Adds all available packages and removes the
-			# ones that cannot be installed due to missing
-			# dependencies.  This behaviour is desired.
-			if ! pkg -c ${BASEDIR} add ${PKG}; then
-				rm -r ${BASEDIR}/${PKG}
+			PKGINFO=$(pkg -c ${BASEDIR} info -F ${PKGFILE} | grep ^Name | awk '{ print $3; }')
+			if [ ${PKG} = ${PKGINFO} ]; then
+				PKGFOUND=${PKGFILE}
 			fi
 		done
-	else
-		# always bootstrap pkg as the first package
-		for PKG in pkg ${PKGLIST}; do
-			# Adds all selected packages and fails if
-			# one cannot be installed.  Used to build
-			# a runtime environment.
-			PKGFOUND=
-			for PKGFILE in $({
-				cd ${BASEDIR}
-				find .${PACKAGESDIR}/All -name "${PKG}-*.txz"
-			}); do
-				PKGINFO=$(pkg -c ${BASEDIR} info -F ${PKGFILE} | grep ^Name | awk '{ print $3; }')
-				if [ ${PKG} = ${PKGINFO} ]; then
-					PKGFOUND=${PKGFILE}
-				fi
-			done
-			if [ -n "${PKGFOUND}" ]; then
-				pkg -c ${BASEDIR} add ${PKGFOUND}
-			else
-				echo "Could not find package: ${PKG}" >&2
-				exit 1
-			fi
-		done
-	fi
+		if [ -n "${PKGFOUND}" ]; then
+			pkg -c ${BASEDIR} add ${PKGFOUND}
+		else
+			echo "Could not find package: ${PKG}" >&2
+			exit 1
+		fi
+	done
 
 	# collect all installed packages (minus locked packages)
 	PKGLIST="$(pkg -c ${BASEDIR} query -e "%k != 1" %n)"
@@ -603,7 +678,7 @@ bundle_packages()
 	# generate index files
 	pkg repo ${BASEDIR}${PACKAGESDIR}-new/ ${SIGNARGS}
 
-	REPO_RELEASE="${REPO_VERSION}-${PRODUCT_FLAVOUR}-${ARCH}"
+	REPO_RELEASE="${REPO_VERSION}-${PRODUCT_FLAVOUR}-${PRODUCT_ARCH}"
 	echo -n ">>> Creating package mirror set for ${REPO_RELEASE}... "
 	tar -C ${STAGEDIR}${PACKAGESDIR}-new -cf \
 	    ${SETSDIR}/packages-${REPO_RELEASE}.tar .
@@ -619,7 +694,7 @@ setup_packages()
 {
 	# legacy package extract
 	extract_packages ${1}
-	install_packages ${@} ${PRODUCT_TYPE}
+	install_packages ${@} ${PRODUCT_PKGNAME}
 	clean_packages ${1}
 }
 
@@ -631,7 +706,7 @@ setup_serial()
 
 	echo "-S${PRODUCT_SPEED} -D" > ${1}/boot.config
 
-	cat > ${1}/boot/loader.conf << EOF
+	cat >> ${1}/boot/loader.conf << EOF
 boot_multicons="YES"
 boot_serial="YES"
 console="comconsole,vidconsole"
@@ -700,6 +775,8 @@ setup_stage()
 
 	MOUNTDIRS="/dev /mnt ${SRCDIR} ${PORTSDIR} ${COREDIR} ${PLUGINSDIR}"
 	STAGE=${1}
+
+	local PID DIR
 
 	shift
 

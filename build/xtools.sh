@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2014-2016 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2016 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,51 +27,39 @@
 
 set -e
 
-SELF=core
+SELF=xtools
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-if [ "$FORCE" != "$SELF" ]; then
-    check_packages ${SELF} ${@}
+if [ ${PRODUCT_HOST} == ${PRODUCT_ARCH} ]; then
+	echo ">>> No need to build xtools on native build"
+	exit 0
 fi
+
+XTOOLS_SET=$(find ${SETSDIR} -name "xtools-*-${PRODUCT_ARCH}.txz")
+
+if [ -f "${XTOOLS_SET}" -a -z "${1}" ]; then
+	echo ">>> Reusing xtools set: ${XTOOLS_SET}"
+	exit 0
+fi
+
+git_describe ${SRCDIR}
+
+XTOOLS_SET=${SETSDIR}/xtools-${REPO_VERSION}-${PRODUCT_ARCH}.txz
+
+sh ./clean.sh ${SELF}
 
 setup_stage ${STAGEDIR}
-setup_base ${STAGEDIR}
-setup_clone ${STAGEDIR} ${PORTSDIR}
-setup_chroot ${STAGEDIR}
 
-extract_packages ${STAGEDIR}
-# register persistent packages to avoid bouncing
-install_packages ${STAGEDIR} pkg git gettext-tools
-lock_packages ${STAGEDIR}
+MAKE_ARGS="TARGET_ARCH=${PRODUCT_ARCH} TARGET=${PRODUCT_TARGET}"
+MAKE_ARGS="${MAKE_ARGS} SRCCONF=${CONFIGDIR}/src.conf __MAKE_CONF="
 
-if [ -z "${*}" ]; then
-	setup_clone ${STAGEDIR} ${COREDIR}
-	CORE_TAGS="bogus"
-else
-	CORE_TAGS="${*}"
-fi
+${ENV_FILTER} make -C${SRCDIR} -j${CPUS} native-xtools ${MAKE_ARGS} NO_CLEAN=yes
 
-for CORE_TAG in ${CORE_TAGS}; do
-	CORE_NAME=${PRODUCT_PKGNAME}
-	CORE_FAMILY="release"
-	CORE_ARGS="CORE_NAME=${CORE_NAME} CORE_FAMILY=${CORE_FAMILY}"
+XTOOLS_DIR=$(make -C${SRCDIR} -f Makefile.inc1 -V OBJTREE ${MAKE_ARGS})/nxb-bin
 
-	if [ -n "${*}" ]; then
-		setup_copy ${STAGEDIR} ${COREDIR}
-		git_checkout ${STAGEDIR}${COREDIR} ${CORE_TAG}
-		git_describe ${STAGEDIR}${COREDIR} ${CORE_TAG}
-		if [ "${REPO_REFTYPE}" != tag ]; then
-			CORE_NAME=$(make -C ${STAGEDIR}${COREDIR} name)
-			CORE_ARGS=
-		fi
-	fi
+echo -n ">>> Generating xtools set... "
 
-	CORE_DEPS=$(make -C ${STAGEDIR}${COREDIR} depends)
+tar -C ${XTOOLS_DIR} -cJf ${XTOOLS_SET} .
 
-	remove_packages ${STAGEDIR} ${CORE_NAME}
-	install_packages ${STAGEDIR} ${CORE_DEPS}
-	custom_packages ${STAGEDIR} ${COREDIR} "${CORE_ARGS}"
-done
-
-bundle_packages ${STAGEDIR} ${SELF}
+echo "done"

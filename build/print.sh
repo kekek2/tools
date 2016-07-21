@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2014-2016 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2016 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,51 +27,10 @@
 
 set -e
 
-SELF=core
+SELF=print
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-if [ "$FORCE" != "$SELF" ]; then
-    check_packages ${SELF} ${@}
-fi
-
-setup_stage ${STAGEDIR}
-setup_base ${STAGEDIR}
-setup_clone ${STAGEDIR} ${PORTSDIR}
-setup_chroot ${STAGEDIR}
-
-extract_packages ${STAGEDIR}
-# register persistent packages to avoid bouncing
-install_packages ${STAGEDIR} pkg git gettext-tools
-lock_packages ${STAGEDIR}
-
-if [ -z "${*}" ]; then
-	setup_clone ${STAGEDIR} ${COREDIR}
-	CORE_TAGS="bogus"
-else
-	CORE_TAGS="${*}"
-fi
-
-for CORE_TAG in ${CORE_TAGS}; do
-	CORE_NAME=${PRODUCT_PKGNAME}
-	CORE_FAMILY="release"
-	CORE_ARGS="CORE_NAME=${CORE_NAME} CORE_FAMILY=${CORE_FAMILY}"
-
-	if [ -n "${*}" ]; then
-		setup_copy ${STAGEDIR} ${COREDIR}
-		git_checkout ${STAGEDIR}${COREDIR} ${CORE_TAG}
-		git_describe ${STAGEDIR}${COREDIR} ${CORE_TAG}
-		if [ "${REPO_REFTYPE}" != tag ]; then
-			CORE_NAME=$(make -C ${STAGEDIR}${COREDIR} name)
-			CORE_ARGS=
-		fi
-	fi
-
-	CORE_DEPS=$(make -C ${STAGEDIR}${COREDIR} depends)
-
-	remove_packages ${STAGEDIR} ${CORE_NAME}
-	install_packages ${STAGEDIR} ${CORE_DEPS}
-	custom_packages ${STAGEDIR} ${COREDIR} "${CORE_ARGS}"
+for ARG in ${@}; do
+	echo ${ARG}=\"$(printenv ${ARG})\"
 done
-
-bundle_packages ${STAGEDIR} ${SELF}

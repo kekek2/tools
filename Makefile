@@ -1,8 +1,8 @@
 STEPS=		base boot cdrom chroot clean core distfiles \
-		kernel nano plugins ports prefetch rebase \
-		release serial skim test vga vm \
+		kernel nano plugins ports prefetch print rebase \
+		release serial sign skim test vga vm xtools \
 		ting_update ting_lang
-		
+
 .PHONY:		${STEPS}
 
 PAGER?=		less
@@ -27,8 +27,11 @@ NAME?=		TING
 TYPE?=		ting
 FLAVOUR?=	OpenSSL
 SETTINGS?=	16.1
+_ARCH!=		uname -m
+ARCH?=		${_ARCH}
 DEVICE?=	a10
 SPEED?=		115200
+UEFI?=		yes
 MIRRORS?=	https://opnsense.c0urier.net \
 		http://mirrors.nycbug.org/pub/opnsense \
 		http://mirror.wdc1.us.leaseweb.net/opnsense \
@@ -37,8 +40,6 @@ MIRRORS?=	https://opnsense.c0urier.net \
 		http://mirror.ams1.nl.leaseweb.net/opnsense
 _VERSION!=	date '+%Y%m%d%H%M'
 VERSION?=	${_VERSION}
-PRIVKEY?=	/root/repo.key
-PUBKEY?=	/root/repo.pub
 STAGEDIRPREFIX?=/usr/obj
 PORTSREFDIR?=	/usr/freebsd-ports
 PLUGINSDIR?=	/usr/plugins
@@ -57,7 +58,7 @@ packages: core
 cdrom vm serial vga nano: packages kernel
 sets: distfiles packages kernel
 images: cdrom nano serial vga vm
-release: images
+release: cdrom nano serial vga
 
 # Expand target arguments for the script append:
 
@@ -71,6 +72,8 @@ ${TARGET}: ${_TARGET}
 
 .if "${VERBOSE}" != ""
 VERBOSE_FLAGS=	-x
+.else
+VERBOSE_HIDDEN=	@
 .endif
 
 # Expand build steps to launch into the selected
@@ -78,13 +81,14 @@ VERBOSE_FLAGS=	-x
 
 .for STEP in ${STEPS}
 ${STEP}: lint
-	@cd ${.CURDIR}/build && sh ${VERBOSE_FLAGS} ./${.TARGET}.sh \
+	${VERBOSE_HIDDEN} cd ${.CURDIR}/build && \
+	    sh ${VERBOSE_FLAGS} ./${.TARGET}.sh -a ${ARCH} \
 	    -f ${FLAVOUR} -n ${NAME} -v ${VERSION} -s ${SETTINGS} \
 	    -S ${SRCDIR} -P ${PORTSDIR} -p ${PLUGINSDIR} -T ${TOOLSDIR} \
-	    -C ${COREDIR} -R ${PORTSREFDIR} -t ${TYPE} -k ${PRIVKEY} \
-	    -K ${PUBKEY} -l "${SIGNCHK}" -L "${SIGNCMD}" -d ${DEVICE} \
+	    -C ${COREDIR} -R ${PORTSREFDIR} -t ${TYPE} -k "${PRIVKEY}" \
+	    -K "${PUBKEY}" -l "${SIGNCHK}" -L "${SIGNCMD}" -d ${DEVICE} \
 	    -m ${MIRRORS:Ox:[1]} -o "${STAGEDIRPREFIX}" -c ${SPEED} -F ${FORCE} \
-	    ${${STEP}_ARGS}
+	    -u "${UEFI:tl}" -U "${SUFFIX}" ${${STEP}_ARGS}
 .endfor
 
 deploy:

@@ -31,7 +31,7 @@ SELF=kernel
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-KERNEL_SET=$(find ${SETSDIR} -name "kernel-*-${ARCH}.txz")
+KERNEL_SET=$(find ${SETSDIR} -name "kernel-*-${PRODUCT_ARCH}.txz")
 
 if [ -f "${KERNEL_SET}" -a -z "${1}" ]; then
 	echo ">>> Reusing kernel set: ${KERNEL_SET}"
@@ -43,19 +43,24 @@ fi
 
 git_describe ${SRCDIR}
 
-KERNEL_SET=${SETSDIR}/kernel-${REPO_VERSION}-${ARCH}
+KERNEL_SET=${SETSDIR}/kernel-${REPO_VERSION}-${PRODUCT_ARCH}
 
 sh ./clean.sh ${SELF}
 
 BUILD_KERNEL="SMP"
+if [ -f ${CONFIGDIR}/${BUILD_KERNEL}.${PRODUCT_ARCH} ]; then
+	BUILD_KERNEL="${BUILD_KERNEL}.${PRODUCT_ARCH}"
+fi
 
-cp ${CONFIGDIR}/${BUILD_KERNEL} ${SRCDIR}/sys/${ARCH}/conf/${BUILD_KERNEL}
+cp ${CONFIGDIR}/${BUILD_KERNEL} \
+    ${SRCDIR}/sys/${PRODUCT_TARGET}/conf/${BUILD_KERNEL}
 
-MAKE_ARGS="TARGET_ARCH=${ARCH} KERNCONF=${BUILD_KERNEL}"
+MAKE_ARGS="TARGET_ARCH=${PRODUCT_ARCH} TARGET=${PRODUCT_TARGET}"
+MAKE_ARGS="${MAKE_ARGS} KERNCONF=${BUILD_KERNEL} __MAKE_CONF="
 
-make -s -C${SRCDIR} -j${CPUS} buildkernel ${MAKE_ARGS} NO_KERNELCLEAN=yes
-make -s -C${SRCDIR}/release obj ${MAKE_ARGS}
-make -s -C${SRCDIR}/release kernel.txz ${MAKE_ARGS}
+${ENV_FILTER} make -s -C${SRCDIR} -j${CPUS} buildkernel ${MAKE_ARGS} NO_KERNELCLEAN=yes
+${ENV_FILTER} make -s -C${SRCDIR}/release obj ${MAKE_ARGS}
+${ENV_FILTER} make -s -C${SRCDIR}/release kernel.txz ${MAKE_ARGS}
 
 mv $(make -C${SRCDIR}/release -V .OBJDIR)/kernel.txz ${KERNEL_SET}.txz
 

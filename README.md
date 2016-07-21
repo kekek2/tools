@@ -74,6 +74,7 @@ All build steps are invoked via make(1):
 
 Available build options are:
 
+* ARCH:		the target architecture if not native
 * CONFIG: 	reads the below from the specified file
 * DEVICE:	loads device-specific modifications, e.g. "a10" (default)
 * FLAVOUR:	"OpenSSL" (default), "LibreSSL"
@@ -83,7 +84,9 @@ Available build options are:
 * PUBKEY:	the public key for signing sets
 * SETTINGS:	the name of the selected settings in config/
 * SPEED:	serial speed, e.g. "115200" (default)
-* TYPE:         the name of the meta package to be installed
+* TYPE:         the base name of the top package to be installed
+* SUFFIX:	the suffix of top package name (empty, "-stable", "-devel")
+* UEFI:		"yes" for amd64 hybrid images with optional UEFI boot
 * VERSION:	a version tag (if applicable)
 
 Build the userland binaries, bootloader and administrative
@@ -126,6 +129,25 @@ A flash card disk image (NanoBSD) is created using:
 A virtual machine disk image is created using:
 
     # make vm
+
+Cross-building for other architecures
+=====================================
+
+This feature is currently experimental.  It requires
+to install a qemu package for user mode emulation:
+
+    # pkg install qemu-user-static
+
+The current target is the Raspberry Pi 1 / 2 using the
+option ARCH=arm:armv6 and is supposed to run best on
+i386 for a matching 32 bit size.
+
+In order to speed up building of an emulated build,
+the xtools set can be build:
+
+    # make xtools ARCH=arm:armv6
+
+The xtools set works similar to the distfiles set.
 
 About other scripts and tweaks
 ==============================
@@ -182,6 +204,11 @@ Package sets (may be signed depending on whether the key is
 found under /root) ready for web server deployment are automatically
 generated and modified by ports.sh and core.sh.
 
+Signing for all sets can be redone or applied to a previous run
+that did not sign by invoking:
+
+    # make sign
+
 Virtual machine images come in varying disk formats and sizes.
 The default format is vmdk with 20G and 1G swap. If you want
 to change that you can manually alter the invoke using:
@@ -217,10 +244,14 @@ Available clean options are:
 * base:		remove base set
 * distfiles:	remove distfiles set
 * cdrom:	remove cdrom image
+* core:		remove core from packages set
 * images:	remove all images
 * kernel:	remove kernel set
 * nano:		remove nano image
+* obj:		remove all object directories
 * packages:	remove packages set
+* plugins:	remove plugins from packages set
+* ports:	alias for "packages" option
 * release:	remove release set
 * serial:	remove serial image
 * sets:		remove all sets
@@ -228,6 +259,7 @@ Available clean options are:
 * stage:	reset main staging area
 * vga:		remove vga image
 * vm:		remove vm image
+* xtools:	remove xtools set
 
 The ports tree has a few of our modifications and is sometimes a
 bit ahead of FreeBSD.  In order to keep the local changes, a skimming
@@ -255,6 +287,11 @@ There's also the posh way to boot a final image using bhyve(8):
 
     # make boot-<image>
 
+Last but not least, in case build variables needs to be inspected,
+they can be printed selectively using:
+
+    # make print-<variable1>[,<variable2>]
+
 About TING tweaks
 ==============================
 
@@ -262,6 +299,10 @@ To build ting-update packet:
 
     # make ting_update
     
+To build ting-lang packet:
+
+    # make ting_lang
+
 To deploy to production:
 
     # make deploy
@@ -273,3 +314,4 @@ To force rebuild core
 To force rebuild plugins:
 
     # make plugins FORCE=plugins
+

@@ -33,18 +33,34 @@ SELF=vga
 
 check_images ${SELF} ${@}
 
-VGAIMG="${IMAGESDIR}/${PRODUCT_RELEASE}-vga-${ARCH}.img"
+VGAIMG="${IMAGESDIR}/${PRODUCT_RELEASE}-vga-${PRODUCT_ARCH}.img"
 
 # rewrite the disk label, because we're install media
 LABEL="${LABEL}_Install"
 
 sh ./clean.sh ${SELF}
 
-setup_stage ${STAGEDIR}
-setup_base ${STAGEDIR}
-setup_kernel ${STAGEDIR}
-setup_packages ${STAGEDIR}
-setup_extras ${STAGEDIR} ${SELF}
-setup_mtree ${STAGEDIR}
-setup_entropy ${STAGEDIR}
-setup_memstick ${STAGEDIR} ${VGAIMG} ${LABEL}
+setup_stage ${STAGEDIR} work
+setup_base ${STAGEDIR}/work
+setup_kernel ${STAGEDIR}/work
+setup_packages ${STAGEDIR}/work
+setup_extras ${STAGEDIR}/work ${SELF}
+setup_mtree ${STAGEDIR}/work
+setup_entropy ${STAGEDIR}/work
+
+cat > ${STAGEDIR}/work/etc/fstab << EOF
+# Device		Mountpoint	FStype	Options		Dump	Pass#
+/dev/ufs/${LABEL}	/		ufs	ro,noatime	1	1
+tmpfs			/tmp		tmpfs	rw,mode=01777	0	0
+EOF
+
+makefs -B little -o label=${LABEL} ${STAGEDIR}/root.part ${STAGEDIR}/work
+
+UEFIBOOT=
+if [ ${PRODUCT_ARCH} = "amd64" -a -n "${PRODUCT_UEFI}" ]; then
+	UEFIBOOT="-p efi:=${STAGEDIR}/work/boot/boot1.efifat"
+fi
+
+mkimg -s gpt -o ${VGAIMG} -b ${STAGEDIR}/work/boot/pmbr ${UEFIBOOT} \
+    -p freebsd-boot:=${STAGEDIR}/work/boot/gptboot \
+    -p freebsd-ufs:=${STAGEDIR}/root.part

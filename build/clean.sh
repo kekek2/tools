@@ -35,11 +35,19 @@ for ARG in ${@}; do
 	case ${ARG} in
 	base)
 		echo ">>> Removing base set"
-		rm -f ${SETSDIR}/base-*-${ARCH}.*
+		rm -f ${SETSDIR}/base-*-${PRODUCT_ARCH}.*
 		;;
 	cdrom)
 		echo ">>> Removing cdrom image"
-		rm -f ${IMAGESDIR}/*-cdrom-${ARCH}.*
+		rm -f ${IMAGESDIR}/*-cdrom-${PRODUCT_ARCH}.*
+		;;
+	core)
+		echo ">>> Removing core from packages set"
+		setup_stage ${STAGEDIR}
+		setup_base ${STAGEDIR}
+		extract_packages ${STAGEDIR}
+		remove_packages ${STAGEDIR} ${PRODUCT_PKGNAMES}
+		bundle_packages ${STAGEDIR} ${SELF} core
 		;;
 	distfiles)
 		echo ">>> Removing distfiles set"
@@ -47,47 +55,64 @@ for ARG in ${@}; do
 		;;
 	images)
 		setup_stage ${IMAGESDIR}
-		rm -r ${IMAGESDIR}
 		;;
 	kernel)
 		echo ">>> Removing kernel set"
-		rm -f ${SETSDIR}/kernel-*-${ARCH}.*
+		rm -f ${SETSDIR}/kernel-*-${PRODUCT_ARCH}.*
 		;;
 	nano)
 		echo ">>> Removing nano image"
-		rm -f ${IMAGESDIR}/*-nano-${ARCH}.*
+		rm -f ${IMAGESDIR}/*-nano-${PRODUCT_ARCH}.*
 		;;
-	packages)
+	obj)
+		for DIR in $(find ${STAGEDIRPREFIX}${TOOLSDIR} -type d -depth 3); do
+			setup_stage ${DIR}
+		done
+		for DIR in $(find /usr/obj -type d -depth 1); do
+			setup_stage ${DIR}
+			rm -rf ${DIR}
+		done
+		;;
+	packages|ports)
 		echo ">>> Removing packages set"
-		rm -f ${SETSDIR}/packages-*-${PRODUCT_FLAVOUR}-${ARCH}.tar
+		rm -f ${SETSDIR}/packages-*-${PRODUCT_FLAVOUR}-${PRODUCT_ARCH}.tar
+		;;
+	plugins)
+		echo ">>> Removing plugins from packages set"
+		setup_stage ${STAGEDIR}
+		setup_base ${STAGEDIR}
+		extract_packages ${STAGEDIR}
+		remove_packages ${STAGEDIR} "os-*" "ospriv-*"
+		bundle_packages ${STAGEDIR} ${SELF} plugins
 		;;
 	release)
 		echo ">>> Removing release set"
-		rm -f ${SETSDIR}/release-*-${PRODUCT_FLAVOUR}-${ARCH}.tar
+		rm -f ${SETSDIR}/release-*-${PRODUCT_FLAVOUR}-${PRODUCT_ARCH}.tar
 		;;
 	serial)
 		echo ">>> Removing serial image"
-		rm -f ${IMAGESDIR}/*-serial-${ARCH}.*
+		rm -f ${IMAGESDIR}/*-serial-${PRODUCT_ARCH}.*
 		;;
 	sets)
 		setup_stage ${SETSDIR}
-		rm -r ${SETSDIR}
 		;;
 	stage)
 		setup_stage ${STAGEDIR}
-		rm -r ${STAGEDIR}
 		;;
 	src)
 		setup_stage /usr/obj${SRCDIR}
-		rm -r /usr/obj${SRCDIR}
 		;;
 	vga)
 		echo ">>> Removing vga image"
-		rm -f ${IMAGESDIR}/*-vga-${ARCH}.*
+		rm -f ${IMAGESDIR}/*-vga-${PRODUCT_ARCH}.*
 		;;
 	vm)
 		echo ">>> Removing vm image"
-		rm -f ${IMAGESDIR}/*-vm-${ARCH}.*
+		rm -f ${IMAGESDIR}/*-vm-${PRODUCT_ARCH}.*
+		;;
+	xtools)
+		echo ">>> Removing xtools set"
+		rm -f ${SETSDIR}/xtools-*-${PRODUCT_ARCH}.*
 		;;
 	esac
 done
