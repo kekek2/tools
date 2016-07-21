@@ -811,8 +811,8 @@ setup_stage()
 make_brand_boot()
 {
     echo ">>> Branded LOGOs and bootloader"
-#    rm ${STAGEDIR}/boot/logo-hour*
-#    rm ${STAGEDIR}/boot/brand-opnsense.4th
+    rm ${1}/boot/logo-hour*
+    rm ${1}/boot/brand-opnsense.4th
     cp -f /usr/tools/branded/brand.4th ${1}/boot/
     cp -f /usr/tools/branded/brand-ting.4th ${1}/boot/
     cp -f /usr/tools/branded/menu.4th ${1}/boot/

@@ -59,6 +59,17 @@ ${ENV_FILTER} make -s -C${SRCDIR}/release base.txz ${MAKE_ARGS}
 
 mv $(make -C${SRCDIR}/release -V .OBJDIR)/base.txz ${BASE_SET}.txz
 
+echo ">>> Patch base set"
+TMPBASE=/tmp/__base
+mkdir ${TMPBASE}
+cd ${TMPBASE}
+tar -xJf ${BASE_SET}.txz
+make_brand_boot ${TMPBASE}
+tar -cJf ../patched_base.txz .
+mv ../patched_base.txz ${BASE_SET}.txz
+chflags -R 0 ${TMPBASE}
+rm -rf ${TMPBASE}
+
 echo -n ">>> Generating obsolete file list... "
 
 tar -tf ${BASE_SET}.txz | \

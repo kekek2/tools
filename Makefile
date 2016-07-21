@@ -95,6 +95,7 @@ deploy:
 	rm -rf /tmp/deploy/pkg/*
 	cd /tmp/deploy/pkg && tar -xf /tmp/sets/packages*
 	rm /tmp/deploy/pkg/All/os-ting-dev-repo*
+#	rm /tmp/deploy/pkg/All/ting-update*
 	cp /tmp/sets/base-* /tmp/deploy/sets/
 	cp /tmp/sets/kernel-* /tmp/deploy/sets/
 	cd ${.CURDIR}/ansible && ansible-playbook deploy-world

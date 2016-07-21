@@ -40,13 +40,12 @@ LABEL="${LABEL}_Install"
 
 sh ./clean.sh ${SELF}
 
-
 setup_stage ${STAGEDIR} work mnt
 setup_base ${STAGEDIR}/work
 setup_kernel ${STAGEDIR}/work
 setup_packages ${STAGEDIR}/work ting os-ndpi
 setup_extras ${STAGEDIR}/work ${SELF}
-make_brand_boot ${STAGEDIR}/work
+#make_brand_boot ${STAGEDIR}/work
 setup_mtree ${STAGEDIR}/work
 setup_entropy ${STAGEDIR}/work
 
