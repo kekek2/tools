@@ -66,7 +66,8 @@ mkdir ${TMPBASE}
 cd ${TMPBASE}
 tar -xJf ${BASE_SET}.txz
 make_brand_boot ${TMPBASE}
-/usr/local/bin/cfv -C -rr -t sha1 bin boot lib libexec rescue sbin usr/bin usr/lib usr/lib32 usr/libdata usr/libexec usr/sbin | sed '/boot\/loader\.conf/d' > base.sum
+/usr/local/bin/cfv -C -rr -VV -t sha1 -f - bin boot lib libexec rescue sbin usr/bin usr/lib usr/lib32 usr/libdata usr/libexec usr/sbin | sed '/boot\/loader\.conf/d' > ../base.sum
+mv ../base.sum .
 tar -cJf ../patched_base.txz .
 mv ../patched_base.txz ${BASE_SET}.txz
 chflags -R 0 ${TMPBASE}
