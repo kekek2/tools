@@ -26,8 +26,8 @@ lint:
 NAME?=		TING
 TYPE?=		ting
 FLAVOUR?=	OpenSSL
-SETTINGS?=	16.1
-_ARCH!=		uname -m
+SETTINGS?=	16.7
+_ARCH!=		uname -p
 ARCH?=		${_ARCH}
 DEVICE?=	a10
 SPEED?=		115200

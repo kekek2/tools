@@ -47,7 +47,7 @@ while getopts a:C:c:d:F:f:K:k:L:l:m:n:o:P:p:R:S:s:T:t:U:u:v: OPT; do
 		amd64|i386|arm:armv6)
 			export PRODUCT_TARGET=${OPTARG%%:*}
 			export PRODUCT_ARCH=${OPTARG##*:}
-			export PRODUCT_HOST=$(uname -m)
+			export PRODUCT_HOST=$(uname -p)
 			SCRUB_ARGS=${SCRUB_ARGS};shift;shift
 			;;
 		*)
@@ -606,18 +606,18 @@ custom_packages()
 {
 	chroot ${1} /bin/sh -es << EOF
 # clear the internal staging area and package files
-rm -rf ${1}
+rm -rf /work
 
 # run the package build process
-make -C ${2} DESTDIR=${1} ${3} FLAVOUR=${PRODUCT_FLAVOUR} metadata
-make -C ${2} DESTDIR=${1} ${3} FLAVOUR=${PRODUCT_FLAVOUR} install
+make -C ${2} DESTDIR=/work ${3} FLAVOUR=${PRODUCT_FLAVOUR} metadata
+make -C ${2} DESTDIR=/work ${3} FLAVOUR=${PRODUCT_FLAVOUR} install
 
 echo "$(pwd) content:"
 ls -la ${1}/
 cat ${1}/plist
 cat ${1}/+MANIFEST
 echo -n ">>> Creating custom package for ${2}... "
-pkg create -m ${1} -r ${1} -p ${1}/plist -o ${PACKAGESDIR}/All
+pkg create -m /work -r /work -p /work/plist -o ${PACKAGESDIR}/All
 echo "done"
 EOF
 }
