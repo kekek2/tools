@@ -65,4 +65,15 @@ sh ./clean.sh ${SELF}
 
 mv $(make -C${SRCDIR}/release -V .OBJDIR)/kernel.txz ${KERNEL_SET}.txz
 
+echo ">>> Patch kernel set"
+TMPBASE=/tmp/__kernel
+mkdir ${TMPBASE}
+cd ${TMPBASE}
+tar -xJf ${KERNEL_SET}.txz
+/usr/local/bin/cfv -C -rr -t sha1 -f - . > kernel.sum
+tar -cJf ../patched_kernel.txz .
+mv ../patched_kernel.txz ${BASE_SET}.txz
+chflags -R 0 ${TMPBASE}
+rm -rf ${TMPBASE}
+
 generate_signature ${KERNEL_SET}.txz
