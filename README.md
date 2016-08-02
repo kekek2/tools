@@ -311,7 +311,7 @@ To force rebuild core
 
     # make core FORCE=core
 
-To force rebuild plugins:
+To force rebuild custom plugin:
 
-    # make plugins FORCE=plugins
+    # make plugins FORCE=os-ndpi
 

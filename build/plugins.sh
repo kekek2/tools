@@ -31,7 +31,7 @@ SELF=plugins
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-if [ "$FORCE" != "$SELF" ]; then
+if [ "$FORCE" == "none" ]; then
     check_packages ${SELF} ${@}
 fi
 
@@ -52,8 +52,10 @@ for PLUGIN in ${PLUGINS_LIST}; do
 	PLUGIN_DEPS=$(make -C ${PLUGINSDIR}/${PLUGIN} depends)
 
 	if search_packages ${STAGEDIR} ${PLUGIN_NAME}; then
-		# already built
-		continue
+		if [ "${FORCE}" != "${PLUGIN_NAME}" ]; then
+	    	    # already built
+		    continue
+		fi
 	fi
 
 	install_packages ${STAGEDIR} ${PLUGIN_DEPS}
