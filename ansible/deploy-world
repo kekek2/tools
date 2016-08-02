@@ -3,7 +3,7 @@
   vars:
     packages_all: /tmp/deploy/pkg/All
     sets: /tmp/deploy/sets
-    version: 1.0.0
+    version: 1.0.1
     abi: FreeBSD:10:amd64
     repo: /opt/ting-repo/{{abi}}/{{version}}
 

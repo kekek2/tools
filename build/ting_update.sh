@@ -5,7 +5,7 @@ SRC_PATH=/tmp/ting-update
 echo ">>> Update ting-update port"
 
 if [ ! -d ${SRC_PATH} ]; then
-    git clone ssh://git@78.157.94.34:7999/ting/update.git ${SRC_PATH}
+    git clone ssh://git@78.157.94.34:7999/ting/opnsense-update-tinged.git ${SRC_PATH}
 fi
 
 cd ${SRC_PATH}

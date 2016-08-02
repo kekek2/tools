@@ -62,7 +62,7 @@ setup_distfiles ${STAGEDIR}
 
 extract_packages ${STAGEDIR}
 remove_packages ${STAGEDIR} ${@} ${PRODUCT_PKGNAMES} "os-*" "ospriv-*"
-remove_packages ${STAGEDIR} opnsense-lang
+remove_packages ${STAGEDIR} opnsense-lang opnsense-update
 bootstrap_packages ${STAGEDIR}
 
 echo ">>> Patching ports..."

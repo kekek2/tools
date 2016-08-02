@@ -612,10 +612,6 @@ rm -rf /work
 make -C ${2} DESTDIR=/work ${3} FLAVOUR=${PRODUCT_FLAVOUR} metadata
 make -C ${2} DESTDIR=/work ${3} FLAVOUR=${PRODUCT_FLAVOUR} install
 
-echo "$(pwd) content:"
-ls -la ${1}/
-cat ${1}/plist
-cat ${1}/+MANIFEST
 echo -n ">>> Creating custom package for ${2}... "
 pkg create -m /work -r /work -p /work/plist -o ${PACKAGESDIR}/All
 echo "done"
