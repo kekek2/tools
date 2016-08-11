@@ -31,6 +31,11 @@ SELF=ports
 
 . ./common.sh && $(${SCRUB_ARGS})
 
+# make package name equals to folder name
+if [ ! -d /usr/ports/security/cyrus-sasl-gssapi ] ; then
+    ln -s /usr/ports/security/cyrus-sasl2-gssapi /usr/ports/security/cyrus-sasl-gssapi
+fi
+
 PORTS_LIST=$(
 cat ${CONFIGDIR}/ports.conf | while read PORT_ORIGIN PORT_BROKEN; do
 	if [ "$(echo ${PORT_ORIGIN} | colrm 2)" = "#" ]; then
