@@ -45,7 +45,6 @@ setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}
 setup_kernel ${STAGEDIR}
 setup_packages ${STAGEDIR} ting os-ndpi
-setup_serial ${STAGEDIR}
 setup_extras ${STAGEDIR} ${SELF}
 #make_brand_boot ${STAGEDIR}
 setup_mtree ${STAGEDIR}
