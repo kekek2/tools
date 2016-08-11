@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SRC_PATH=/tmp/ting-lang
+SRC_PATH=/usr/lang
 
 echo ">>> Update ting-lang port"
 
