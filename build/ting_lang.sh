@@ -11,7 +11,7 @@ fi
 cd ${SRC_PATH}
 git checkout ting
 git pull
-PORT_VERSION=$(git describe)
+PORT_VERSION=$(git describe | awk -F'-' '{print $1}')
 mkdir /tmp/lang
 cp -Rf ${SRC_PATH}/* /tmp/lang
 cd /tmp
