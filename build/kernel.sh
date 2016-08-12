@@ -66,6 +66,7 @@ mv $(make -C${SRCDIR}/release -V .OBJDIR)/kernel.txz ${KERNEL_SET}.txz
 
 echo ">>> Patch kernel set"
 TMPBASE=/tmp/__kernel
+rm -Rf ${TMPBASE}
 mkdir ${TMPBASE}
 cd ${TMPBASE}
 tar -xJf ${KERNEL_SET}.txz
