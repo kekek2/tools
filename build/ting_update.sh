@@ -11,7 +11,7 @@ fi
 cd ${SRC_PATH}
 git checkout tinged
 git pull
-PORT_VERSION=$(git describe)
+PORT_VERSION=$(git describe | awk -F'-' '{print $1}')
 mkdir /tmp/src
 cp -Rf ${SRC_PATH}/* /tmp/src
 cd /tmp
