@@ -32,7 +32,7 @@ SELF=ports
 . ./common.sh && $(${SCRUB_ARGS})
 
 PORTS_LIST=$(
-cat ${CONFIGDIR}/ports.conf  | while read PORT_ORIGIN PORT_BROKEN; do
+cat ${CONFIGDIR}/ports.conf | while read PORT_ORIGIN PORT_BROKEN; do
 	if [ "$(echo ${PORT_ORIGIN} | colrm 2)" = "#" ]; then
 		continue
 	fi
@@ -81,7 +81,8 @@ trap : 2
 
 if ! ${ENV_FILTER} chroot ${STAGEDIR} /bin/sh -es << EOF; then SELF=; fi
 if ! pkg -N; then
-	make -C ${PORTSDIR}/ports-mgmt/pkg install
+	make -C ${PORTSDIR}/ports-mgmt/pkg install \
+	    UNAME_r=\$(freebsd-version)
 fi
 
 echo "${PORTS_LIST}" | while read PORT_ORIGIN; do
@@ -91,8 +92,15 @@ echo "${PORTS_LIST}" | while read PORT_ORIGIN; do
 
 	echo ">>> Building \${PORT_ORIGIN}"
 	make -C ${PORTSDIR}/\${PORT_ORIGIN} install \
-	    PRODUCT_FLAVOUR=${PRODUCT_FLAVOUR}
+	    PRODUCT_FLAVOUR=${PRODUCT_FLAVOUR} \
+	    UNAME_r=\$(freebsd-version) || \
+	    PORT_ERROR="\${PORT_ORIGIN} \${PORT_ERROR}"
 done
+
+if [ -n "\${PORT_ERROR}" ]; then
+	echo ">>> The following ports did not finish: \${PORT_ERROR}"
+	exit 1
+fi
 EOF
 
 # unblock SIGINT
