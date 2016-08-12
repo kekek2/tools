@@ -62,6 +62,7 @@ mv $(make -C${SRCDIR}/release -V .OBJDIR)/base.txz ${BASE_SET}.txz
 
 echo ">>> Patch base set"
 TMPBASE=/tmp/__base
+rm -Rf ${TMPBASE}
 mkdir ${TMPBASE}
 cd ${TMPBASE}
 tar -xJf ${BASE_SET}.txz
