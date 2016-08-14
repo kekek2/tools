@@ -31,10 +31,15 @@ SELF=distfiles
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-PORTS_LIST="ports-mgmt/pkg
-security/openssl
-security/libressl
-$(cat ${CONFIGDIR}/ports.conf)"
+PORTS_LIST=$(
+cat ${CONFIGDIR}/skim.conf ${CONFIGDIR}/ports.conf | \
+    while read PORT_ORIGIN PORT_BROKEN; do
+	if [ "$(echo ${PORT_ORIGIN} | colrm 2)" = "#" ]; then
+		continue
+	fi
+	echo ${PORT_ORIGIN}
+done
+)
 
 setup_stage ${STAGEDIR}
 setup_base ${STAGEDIR}
@@ -57,15 +62,12 @@ echo "CLEAN_FETCH_ENV=yes" >> ${STAGEDIR}/etc/make.conf
 # block SIGINT to allow for collecting port progress (use with care)
 trap : 2
 
-if ! chroot ${STAGEDIR} /bin/sh -es << EOF; then PORTS_LIST=; fi
-echo "${PORTS_LIST}" | while read PORT_ORIGIN PORT_BROKEN; do
-	if [ "\$(echo \${PORT_ORIGIN} | colrm 2)" = "#" ]; then
-		continue
-	fi
-
+if ! ${ENV_FILTER} chroot ${STAGEDIR} /bin/sh -es << EOF; then PORTS_LIST=; fi
+echo "${PORTS_LIST}" | while read PORT_ORIGIN; do
 	echo ">>> Fetching \${PORT_ORIGIN}..."
-
-	make -C ${PORTSDIR}/\${PORT_ORIGIN} fetch-recursive
+	make -C ${PORTSDIR}/\${PORT_ORIGIN} fetch-recursive \
+	    PRODUCT_FLAVOUR=${PRODUCT_FLAVOUR} \
+	    UNAME_r=\$(freebsd-version)
 done
 EOF
 
