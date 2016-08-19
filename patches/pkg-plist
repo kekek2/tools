@@ -104,6 +104,6 @@ sbin/havp
 %%EXAMPLESDIR%%/templates/sv/scanner.html
 %%EXAMPLESDIR%%/templates/sv/virus.html
 %%EXAMPLESDIR%%/whitelist.sample
-@dir(clamav,clamav,755) %%LOG_DIR%%
-@dir(clamav,clamav,755) %%TMP_DIR%%
-@dir(clamav,clamav,755) %%RUN_DIR%%
+@dir(havp,havp,755) %%LOG_DIR%%
+@dir(havp,havp,755) %%TMP_DIR%%
+@dir(havp,havp,755) %%RUN_DIR%%

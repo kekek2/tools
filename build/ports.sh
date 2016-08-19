@@ -67,7 +67,7 @@ bootstrap_packages ${STAGEDIR}
 
 echo ">>> Patching ports..."
 
-cp ${TOOLSDIR}/patches/pkg-install.in ${TOOLSDIR}/patches/pkg-deinstall.in ${TOOLSDIR}/patches/patch-havp_Makefile.in /usr/ports/www/havp/files
+cp ${TOOLSDIR}/patches/patch-havp_Makefile.in /usr/ports/www/havp/files
 cp ${TOOLSDIR}/patches/pkg-plist /usr/ports/www/havp
 
 echo ">>> Building packages..."
@@ -107,8 +107,6 @@ EOF
 # unblock SIGINT
 trap - 2
 
-cp ${TOOLSDIR}/patches/pkg-install.in.orig /usr/ports/www/havp/files/pkg-install.in
-cp ${TOOLSDIR}/patches/pkg-deinstall.in.orig /usr/ports/www/havp/files/pkg-deinstall.in
 cp ${TOOLSDIR}/patches/patch-havp_Makefile.in.orig /usr/ports/www/havp/files/patch-havp_Makefile.in
 cp ${TOOLSDIR}/patches/pkg-plist.orig /usr/ports/www/havp/pkg-plist
 
