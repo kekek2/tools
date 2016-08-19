@@ -67,8 +67,6 @@ bootstrap_packages ${STAGEDIR}
 
 echo ">>> Patching ports..."
 
-cp ${TOOLSDIR}/patches/patch-havp_logfile.cpp /usr/ports/www/havp/files
-
 echo ">>> Building packages..."
 
 MAKE_CONF="${CONFIGDIR}/make.conf"
@@ -105,8 +103,6 @@ EOF
 
 # unblock SIGINT
 trap - 2
-
-rm /usr/ports/www/havp/files/patch-havp_logfile.cpp
 
 echo ">>> Creating binary packages..."
 
