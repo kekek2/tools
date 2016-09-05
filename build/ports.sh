@@ -72,8 +72,16 @@ bootstrap_packages ${STAGEDIR}
 
 echo ">>> Patching ports..."
 
+# HAVP
 cp ${TOOLSDIR}/patches/patch-havp_Makefile.in /usr/ports/www/havp/files
 cp ${TOOLSDIR}/patches/pkg-plist /usr/ports/www/havp
+
+# bsdinstaller
+if [ ! -d /usr/ports/opnsense/bsdinstaller/files ] ; then
+    mkdir -p /usr/ports/opnsense/bsdinstaller/files
+fi
+cp ${TOOLSDIR}/patches/patch-installer_conf_Product.lua /usr/ports/opnsense/bsdinstaller/files/
+cp ${TOOLSDIR}/patches/patch-ncurses_hourglass.txt /usr/ports/opnsense/bsdinstaller/files/
 
 echo ">>> Building packages..."
 
