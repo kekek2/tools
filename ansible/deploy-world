@@ -2,10 +2,10 @@
 - hosts: ting-repo
   vars:
     packages_all: /tmp/deploy/pkg/All
-    sets: /tmp/deploy/sets
+    sets: /tmp/deploy/sets-fstec
     version: 1.0.1
     abi: FreeBSD:10:amd64
-    repo: /opt/ting-repo/{{abi}}/{{version}}
+    repo: /opt/ting-repo/{{abi}}/{{version}}-fstec
 
   tasks:
 
@@ -13,7 +13,7 @@
     synchronize: src={{ packages_all }} dest={{repo}} delete=yes
     
   - name: update repo
-    command: /usr/sbin/pkg repo /opt/ting-repo/{{abi}}/{{version}}
+    command: /usr/sbin/pkg repo {{repo}}
 
   - name: upload base and kernel
     synchronize: src={{ sets }} dest=/opt/ting-repo
