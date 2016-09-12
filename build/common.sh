@@ -207,8 +207,8 @@ export DEVICEDIR="${TOOLSDIR}/device"
 export PACKAGESDIR="/.pkg"
 
 # define and bootstrap target directories
-export IMAGESDIR="/tmp/images"
-export SETSDIR="/tmp/sets"
+export IMAGESDIR="/tmp/images-fstec"
+export SETSDIR="/tmp/sets-fstec"
 mkdir -p ${IMAGESDIR} ${SETSDIR}
 
 # automatically expanded product stuff
