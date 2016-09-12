@@ -93,11 +93,11 @@ ${STEP}: lint
 
 deploy:
 	rm -rf /tmp/deploy/pkg/*
-	cd /tmp/deploy/pkg && tar -xf /tmp/sets/packages*
+	cd /tmp/deploy/pkg && tar -xf /tmp/sets-fstec/packages*
 	rm /tmp/deploy/pkg/All/os-ting-dev-repo*
 #	rm /tmp/deploy/pkg/All/ting-update*
-	cp /tmp/sets/base-* /tmp/deploy/sets/
-	cp /tmp/sets/kernel-* /tmp/deploy/sets/
+	cp /tmp/sets-fstec/base-* /tmp/deploy/sets-fstec/
+	cp /tmp/sets-fstec/kernel-* /tmp/deploy/sets-fstec/
 	cd ${.CURDIR}/ansible && ansible-playbook deploy-world
 
 stats:
