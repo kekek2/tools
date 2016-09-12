@@ -9,7 +9,8 @@ if [ ! -d ${SRC_PATH} ]; then
 fi
 
 cd ${SRC_PATH}
-git checkout tinged
+git pull
+git checkout ting-fstec
 git pull
 PORT_VERSION=$(git describe | awk -F'-' '{print $1}')
 mkdir /tmp/src
