@@ -692,6 +692,8 @@ _setup_extras_generic()
 		return
 	fi
 
+	unset -f ${2}_hook
+
 	. ${CONFIGDIR}/extras.conf
 
 	if [ -n "$(type ${2}_hook 2> /dev/null)" ]; then
@@ -706,6 +708,8 @@ _setup_extras_device()
 	if [ ! -f ${DEVICEDIR}/${PRODUCT_DEVICE}.conf ]; then
 		return
 	fi
+
+	unset -f ${2}_hook
 
 	. ${DEVICEDIR}/${PRODUCT_DEVICE}.conf
 

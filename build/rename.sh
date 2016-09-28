@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2014-2016 Franco Fichtner <franco@opnsense.org>
+# Copyright (c) 2016 Franco Fichtner <franco@opnsense.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,42 +27,25 @@
 
 set -e
 
-SELF=kernel
+SELF=rename
 
 . ./common.sh && $(${SCRUB_ARGS})
 
-KERNEL_SET=$(find ${SETSDIR} -name "kernel-*-${PRODUCT_ARCH}.txz")
-
-if [ -f "${KERNEL_SET}" -a -z "${1}" ]; then
-	echo ">>> Reusing kernel set: ${KERNEL_SET}"
-	git_describe ${SRCDIR}
-	KERNEL_SET=${SETSDIR}/kernel-${REPO_VERSION}-${PRODUCT_ARCH}
-	generate_signature ${KERNEL_SET}.txz
-	exit 0
-fi
-
-git_describe ${SRCDIR}
-
-KERNEL_SET=${SETSDIR}/kernel-${REPO_VERSION}-${PRODUCT_ARCH}
-
-BUILD_KERNEL="SMP"
-if [ -f ${CONFIGDIR}/${BUILD_KERNEL}.${PRODUCT_ARCH} ]; then
-	BUILD_KERNEL="${BUILD_KERNEL}.${PRODUCT_ARCH}"
-fi
-
-cp ${CONFIGDIR}/${BUILD_KERNEL} \
-    ${SRCDIR}/sys/${PRODUCT_TARGET}/conf/${BUILD_KERNEL}
-
-MAKE_ARGS="TARGET_ARCH=${PRODUCT_ARCH} TARGET=${PRODUCT_TARGET}"
-MAKE_ARGS="${MAKE_ARGS} KERNCONF=${BUILD_KERNEL} __MAKE_CONF="
-
-${ENV_FILTER} make -s -C${SRCDIR} -j${CPUS} buildkernel ${MAKE_ARGS} NO_KERNELCLEAN=yes
-${ENV_FILTER} make -s -C${SRCDIR}/release obj ${MAKE_ARGS}
-rm -f $(make -C${SRCDIR}/release -V .OBJDIR)/kernel.txz
-${ENV_FILTER} make -s -C${SRCDIR}/release kernel.txz ${MAKE_ARGS}
-
-sh ./clean.sh ${SELF}
-
-mv $(make -C${SRCDIR}/release -V .OBJDIR)/kernel.txz ${KERNEL_SET}.txz
-
-generate_signature ${KERNEL_SET}.txz
+for ARG in ${@}; do
+	case ${ARG} in
+	base)
+		echo ">>> Renaming base set: ${NAME}"
+		for FILE in $(find ${SETSDIR} -name \
+		    "base-*-${PRODUCT_ARCH}.*"); do
+			mv ${FILE} ${SETSDIR}/base-${NAME}-${FILE##*-}
+		done
+		;;
+	kernel)
+		echo ">>> Renaming kernel set: ${NAME}"
+		for FILE in $(find ${SETSDIR} -name \
+		    "kernel-*-${PRODUCT_ARCH}.*"); do
+			mv ${FILE} ${SETSDIR}/kernel-${NAME}-${FILE##*-}
+		done
+		;;
+	esac
+done
