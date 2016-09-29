@@ -27,30 +27,25 @@
 
 set -e
 
-SELF=prefetch
+SELF=rename
 
 . ./common.sh && $(${SCRUB_ARGS})
 
 for ARG in ${@}; do
 	case ${ARG} in
 	base)
-		sh ./clean.sh ${ARG}
-		URL="${PRODUCT_MIRROR}/sets/${ARG}-${PRODUCT_VERSION}-${PRODUCT_ARCH}"
-		for SUFFIX in obsolete.sig obsolete txz.sig txz; do
-			fetch -o ${SETSDIR} ${URL}.${SUFFIX}
-		done;
+		echo ">>> Renaming base set: ${NAME}"
+		for FILE in $(find ${SETSDIR} -name \
+		    "base-*-${PRODUCT_ARCH}.*"); do
+			mv ${FILE} ${SETSDIR}/base-${NAME}-${FILE##*-}
+		done
 		;;
 	kernel)
-		sh ./clean.sh ${ARG}
-		URL="${PRODUCT_MIRROR}/sets/${ARG}-${PRODUCT_VERSION}-${PRODUCT_ARCH}"
-		for SUFFIX in txz.sig txz; do
-			fetch -o ${SETSDIR} ${URL}.${SUFFIX}
-		done;
-		;;
-	packages)
-		sh ./clean.sh ${ARG}
-		URL="${PRODUCT_MIRROR}/sets/${ARG}-${PRODUCT_VERSION}-${PRODUCT_FLAVOUR}-${PRODUCT_ARCH}"
-		fetch -o ${SETSDIR} ${URL}.tar
+		echo ">>> Renaming kernel set: ${NAME}"
+		for FILE in $(find ${SETSDIR} -name \
+		    "kernel-*-${PRODUCT_ARCH}.*"); do
+			mv ${FILE} ${SETSDIR}/kernel-${NAME}-${FILE##*-}
+		done
 		;;
 	esac
 done
