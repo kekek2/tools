@@ -103,3 +103,9 @@ deploy:
 stats:
 	@cd ${.CURDIR}/build && sh ./stats.sh
 
+checksums:
+	@cd ${.CURDIR}/build && sh ./fstek-checksums.sh
+
+filetypes:
+	@cd ${.CURDIR}/build && sh ./fstek-filetypes.sh
+	
